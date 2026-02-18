@@ -352,7 +352,7 @@ const Admin = {
                                                     <span class="product-name-cell">${product.name}</span>
                                                 </div>
                                             </td>
-                                            <td>1</td>
+                                            <td>${product.gram}</td>
                                             <td><strong>NPR ${product.price.toLocaleString()}</strong></td>
                                             <td><span class="stock-badge-small">${product.stock}</span></td>
                                             <td>
