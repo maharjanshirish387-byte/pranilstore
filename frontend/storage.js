@@ -187,7 +187,7 @@ const StorageManager = {
     },
 
     isCustomerLoggedIn() {
-        return sessionStorage.getItem('current_user_id') !== null;
+        return sessionStorage.getItem('current_user_id') !== null || !!sessionStorage.getItem('auth_token');
     },
 
     async updateCustomerProfile(customerId, updates) {

@@ -48,7 +48,7 @@ const CustomerAuth = {
         document.getElementById('registerConfirmPassword').value = '';
     },
 
-    // Handle login
+    // Handle login (server-backed)
     async login() {
         const email = document.getElementById('loginEmail').value.trim();
         const password = document.getElementById('loginPassword').value;
@@ -58,15 +58,31 @@ const CustomerAuth = {
             return;
         }
 
-        const result = await StorageManager.loginCustomer(email, password);
+        try {
+            const apiBase = (window.APP_CONFIG && window.APP_CONFIG.apiBase) || '';
+            const resp = await fetch(`${apiBase}/api/login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password })
+            });
 
-        if (result.success) {
-            this.currentUser = result.customer;
-            showNotification(`Welcome back, ${result.customer.name}! 🎉`, 'success');
+            const data = await resp.json();
+            if (!resp.ok) {
+                showNotification(data.error || 'Login failed', 'error');
+                return;
+            }
+
+            // store token + user
+            sessionStorage.setItem('auth_token', data.token);
+            sessionStorage.setItem('current_user_id', data.customer.customerId);
+            sessionStorage.setItem('current_user', JSON.stringify(data.customer));
+
+            this.currentUser = data.customer;
+            showNotification(`Welcome back, ${data.customer.name}! 🎉`, 'success');
             this.closeAuthModal();
-            this.updateUIForLoggedInUser(result.customer);
-        } else {
-            showNotification(result.message, 'error');
+            this.updateUIForLoggedInUser(data.customer);
+        } catch (e) {
+            showNotification('Login failed: ' + e.message, 'error');
         }
     },
 
@@ -105,13 +121,30 @@ const CustomerAuth = {
             password
         };
 
-        const result = await StorageManager.registerCustomer(customerData);
+        try {
+            const apiBase = (window.APP_CONFIG && window.APP_CONFIG.apiBase) || '';
+            const resp = await fetch(`${apiBase}/api/register`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, email, phone, location, pan, password })
+            });
 
-        if (result.success) {
-            showNotification('✨ Registration successful! Please login.', 'success');
-            this.switchToLogin();
-        } else {
-            showNotification(result.message, 'error');
+            const data = await resp.json();
+            if (!resp.ok) {
+                showNotification(data.error || 'Registration failed', 'error');
+                return;
+            }
+
+            // store token + user
+            sessionStorage.setItem('auth_token', data.token);
+            sessionStorage.setItem('current_user_id', data.customer.customerId);
+            sessionStorage.setItem('current_user', JSON.stringify(data.customer));
+
+            showNotification('✨ Registration successful! You are logged in.', 'success');
+            this.updateUIForLoggedInUser(data.customer);
+            this.closeAuthModal();
+        } catch (e) {
+            showNotification('Registration failed: ' + e.message, 'error');
         }
     },
 
@@ -119,6 +152,9 @@ const CustomerAuth = {
     logout() {
         if (confirm('Are you sure you want to logout?')) {
             StorageManager.logoutCustomer();
+            sessionStorage.removeItem('auth_token');
+            sessionStorage.removeItem('current_user');
+            sessionStorage.removeItem('current_user_id');
             this.currentUser = null;
             showNotification('Logged out successfully 👋', 'success');
             this.updateUIForLoggedOutUser();
