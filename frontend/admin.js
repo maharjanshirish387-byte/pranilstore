@@ -332,8 +332,8 @@ const Admin = {
                                 <thead>
                                     <tr>
                                         <th>Product</th>
-                                        <th>Price</th>
                                         <th>Weight</th>
+                                        <th>Price</th>
                                         <th>Stock</th>
                                         <th>Status</th>
                                         <th>Actions</th>
@@ -352,8 +352,8 @@ const Admin = {
                                                     <span class="product-name-cell">${product.name}</span>
                                                 </div>
                                             </td>
-                                            <td><strong>NPR ${product.price.toLocaleString()}</strong></td>
                                             <td>1</td>
+                                            <td><strong>NPR ${product.price.toLocaleString()}</strong></td>
                                             <td><span class="stock-badge-small">${product.stock}</span></td>
                                             <td>
                                                 <span class="status-badge ${product.stock > 10 ? 'status-success' : product.stock > 0 ? 'status-warning' : 'status-danger'}">
