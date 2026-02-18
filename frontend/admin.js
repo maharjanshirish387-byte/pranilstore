@@ -353,7 +353,7 @@ const Admin = {
                                                 </div>
                                             </td>
                                             <td><strong>NPR ${product.price.toLocaleString()}</strong></td>
-                                            <td>${product.gram}</td>
+                                            <td>1</td>
                                             <td><span class="stock-badge-small">${product.stock}</span></td>
                                             <td>
                                                 <span class="status-badge ${product.stock > 10 ? 'status-success' : product.stock > 0 ? 'status-warning' : 'status-danger'}">
