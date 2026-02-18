@@ -17,7 +17,7 @@ function showCompanies() {
 document.addEventListener('DOMContentLoaded', async () => {
     await StorageManager.init();
     await renderCompanies();
-    CustomerAuth.checkAuthStatus();
+    await CustomerAuth.checkAuthStatus();
     Admin.checkAdminStatus();
 
     // Keyboard shortcuts

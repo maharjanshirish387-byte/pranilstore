@@ -49,7 +49,7 @@ const CustomerAuth = {
     },
 
     // Handle login
-    login() {
+    async login() {
         const email = document.getElementById('loginEmail').value.trim();
         const password = document.getElementById('loginPassword').value;
 
@@ -58,7 +58,7 @@ const CustomerAuth = {
             return;
         }
 
-        const result = StorageManager.loginCustomer(email, password);
+        const result = await StorageManager.loginCustomer(email, password);
 
         if (result.success) {
             this.currentUser = result.customer;
@@ -71,7 +71,7 @@ const CustomerAuth = {
     },
 
     // Handle registration
-    register() {
+    async register() {
         const name = document.getElementById('registerName').value.trim();
         const email = document.getElementById('registerEmail').value.trim();
         const phone = document.getElementById('registerPhone').value.trim();
@@ -105,7 +105,7 @@ const CustomerAuth = {
             password
         };
 
-        const result = StorageManager.registerCustomer(customerData);
+        const result = await StorageManager.registerCustomer(customerData);
 
         if (result.success) {
             showNotification('✨ Registration successful! Please login.', 'success');
@@ -314,9 +314,9 @@ const CustomerAuth = {
     },
 
     // Check auth status on page load
-    checkAuthStatus() {
+    async checkAuthStatus() {
         if (StorageManager.isCustomerLoggedIn()) {
-            const customer = StorageManager.getCurrentUser();
+            const customer = await StorageManager.getCurrentUser();
             if (customer) {
                 this.currentUser = customer;
                 this.updateUIForLoggedInUser(customer);
