@@ -1120,6 +1120,175 @@ body {
     opacity: 0.7;
 }
 
+/* INPUT WITH ICONS */
+.input-with-icon .input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.input-with-icon .input-icon {
+    position: absolute;
+    left: 1rem;
+    color: var(--color-gray-400);
+    pointer-events: none;
+    transition: color var(--transition-base);
+}
+
+.input-with-icon input {
+    padding-left: 2.75rem;
+}
+
+.input-with-icon input:focus + .input-icon,
+.input-with-icon input:focus ~ .input-icon {
+    color: var(--color-black);
+}
+
+.input-with-icon input:focus {
+    border-color: var(--color-black);
+}
+
+.input-with-icon:focus-within .input-icon {
+    color: var(--color-black);
+}
+
+/* OPTIONAL FIELD */
+.optional-field label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.optional-badge {
+    font-size: 0.6875rem;
+    font-weight: 500;
+    padding: 0.125rem 0.5rem;
+    background: var(--color-gray-100);
+    color: var(--color-gray-500);
+    border-radius: var(--radius-sm);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+/* PASSWORD STRENGTH */
+.password-strength {
+    display: none;
+    margin-top: 0.5rem;
+}
+
+.password-strength.active {
+    display: block;
+}
+
+.strength-bar {
+    height: 4px;
+    background: var(--color-gray-200);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-bottom: 0.25rem;
+}
+
+.strength-fill {
+    height: 100%;
+    width: 0;
+    transition: all var(--transition-base);
+    border-radius: 2px;
+}
+
+.strength-fill.weak {
+    width: 33%;
+    background: #ef4444;
+}
+
+.strength-fill.medium {
+    width: 66%;
+    background: #f59e0b;
+}
+
+.strength-fill.strong {
+    width: 100%;
+    background: #10b981;
+}
+
+.strength-text {
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.strength-text.weak { color: #ef4444; }
+.strength-text.medium { color: #f59e0b; }
+.strength-text.strong { color: #10b981; }
+
+/* TERMS CHECKBOX */
+.terms-group {
+    margin-top: 0.5rem;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    cursor: pointer;
+    font-size: 0.8125rem;
+    color: var(--color-gray-600);
+    line-height: 1.4;
+}
+
+.checkbox-label input[type="checkbox"] {
+    display: none;
+}
+
+.checkbox-custom {
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--color-gray-300);
+    border-radius: var(--radius-sm);
+    transition: all var(--transition-base);
+    position: relative;
+    margin-top: 2px;
+}
+
+.checkbox-label input[type="checkbox"]:checked + .checkbox-custom {
+    background: var(--color-black);
+    border-color: var(--color-black);
+}
+
+.checkbox-label input[type="checkbox"]:checked + .checkbox-custom::after {
+    content: '';
+    position: absolute;
+    left: 5px;
+    top: 1px;
+    width: 6px;
+    height: 10px;
+    border: solid white;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+}
+
+.checkbox-label:hover .checkbox-custom {
+    border-color: var(--color-gray-400);
+}
+
+.checkbox-text a {
+    color: var(--color-black);
+    text-decoration: underline;
+    font-weight: 500;
+}
+
+.checkbox-text a:hover {
+    opacity: 0.7;
+}
+
+/* REGISTER ICON */
+.auth-brand-icon.register-icon {
+    background: linear-gradient(135deg, var(--color-gray-100), var(--color-gray-200));
+}
+
+.auth-brand-icon.register-icon svg {
+    stroke: var(--color-black);
+}
+
 /* MODAL OVERLAY & CONTENT */
 .modal-overlay {
     position: fixed;
