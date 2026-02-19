@@ -528,14 +528,18 @@ const Admin = {
             return;
         }
 
-        await Database.insert('products', {
-            company_id: companyId,
-            product_name: product.name,
-            price: product.price,
-            weight: product.gram,
-            stock_quantity: product.stock,
-            icon_emoji: product.image,
-            is_active: true
+        await fetch('http://localhost:3000/api/products', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                company_id: companyId,
+                product_name: product.name,
+                price: product.price,
+                weight: product.gram,
+                stock_quantity: product.stock,
+                icon_emoji: product.image,
+                is_active: true
+            })
         });
 
         this.productImageBase64 = null;
@@ -600,16 +604,17 @@ const Admin = {
             return;
         }
 
-        await Database.update('products',
-            { product_id: productId },
-            {
+        await fetch(`http://localhost:3000/api/products/${productId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
                 product_name: updatedProduct.name,
                 price: updatedProduct.price,
                 weight: updatedProduct.gram,
                 stock_quantity: updatedProduct.stock,
                 icon_emoji: updatedProduct.image
-            }
-        );
+            })
+        });
 
         this.productImageBase64 = null;
         this.closeEditModal();
@@ -639,10 +644,9 @@ const Admin = {
     async deleteProduct(companyId, productId) {
         if (!confirm('Are you sure you want to delete this product?')) return;
 
-        await Database.update('products', 
-            { product_id: productId },
-            { is_active: false }
-        );
+        await fetch(`http://localhost:3000/api/products/${productId}`, {
+            method: 'DELETE'
+        });
 
         showNotification('Product deleted successfully', 'success');
         await this.showView('products');
@@ -657,15 +661,9 @@ const Admin = {
             return;
         }
 
-        await Database.update('companies', 
-            { company_id: companyId },
-            { is_active: false }
-        );
-
-        await Database.update('products', 
-            { company_id: companyId },
-            { is_active: false }
-        );
+        await fetch(`http://localhost:3000/api/companies/${companyId}`, {
+            method: 'DELETE'
+        });
 
         showNotification('Company deleted successfully', 'success');
         await this.showView('companies');
@@ -836,15 +834,20 @@ const Admin = {
             const logoBase64 = e.target.result;
 
             // Get next company ID
-            const companies = await Database.select('companies');
+            // Get all companies to determine nextId
+            const resCompanies = await fetch('http://localhost:3000/api/companies');
+            const companies = await resCompanies.json();
             const nextId = companies.length > 0 ? Math.max(...companies.map(c => c.company_id)) + 1 : 1;
-
-            await Database.insert('companies', {
-                company_id: nextId,
-                company_name: name,
-                logo_url: logoBase64,
-                background_color: bgColor,
-                is_active: true
+            await fetch('http://localhost:3000/api/companies', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    company_id: nextId,
+                    company_name: name,
+                    logo_url: logoBase64,
+                    background_color: bgColor,
+                    is_active: true
+                })
             });
 
             this.closeAddCompanyModal();
@@ -870,25 +873,21 @@ const Admin = {
             return;
         }
 
-        const company = await Database.findOne('companies', { company_id: companyId });
-        if (!company) {
-            showNotification('Company not found', 'error');
-            return;
-        }
-
+        // Always update company via API
+        let logoBase64 = null;
         if (logoFile) {
-            // New logo uploaded - convert to base64
             const reader = new FileReader();
             reader.onload = async (e) => {
-                const logoBase64 = e.target.result;
-                await Database.update('companies', 
-                    { company_id: companyId },
-                    {
+                logoBase64 = e.target.result;
+                await fetch(`http://localhost:3000/api/companies/${companyId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
                         company_name: name,
                         logo_url: logoBase64,
                         background_color: bgColor
-                    }
-                );
+                    })
+                });
                 this.closeEditCompanyModal();
                 showNotification('Company updated successfully', 'success');
                 await this.showView('companies');
@@ -896,14 +895,14 @@ const Admin = {
             };
             reader.readAsDataURL(logoFile);
         } else {
-            // No new logo - keep existing
-            await Database.update('companies',
-                { company_id: companyId },
-                {
+            await fetch(`http://localhost:3000/api/companies/${companyId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
                     company_name: name,
                     background_color: bgColor
-                }
-            );
+                })
+            });
             this.closeEditCompanyModal();
             showNotification('Company updated successfully', 'success');
             await this.showView('companies');

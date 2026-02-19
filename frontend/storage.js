@@ -53,25 +53,19 @@ const StorageManager = {
     },
 
     async getCompanies() {
-        const companies = await Database.select('companies');
-        
-        // Filter to active companies (default to active if not set)
-        const activeCompanies = companies.filter(c => c.is_active !== false);
-        
-        // Fetch products for each company
-        for (const company of activeCompanies) {
-            company.products = await Database.select('products', { 
-                company_id: company.company_id, 
-                is_active: true 
-            });
-        }
-
-        return activeCompanies.map(c => ({
+        // Fetch companies from backend API
+        const res = await fetch('http://localhost:3000/api/companies');
+        const companies = await res.json();
+        // Fetch all products from backend API
+        const resProducts = await fetch('http://localhost:3000/api/products');
+        const products = await resProducts.json();
+        // Attach products to companies
+        return companies.filter(c => c.is_active !== false).map(c => ({
             id: c.company_id,
             name: c.company_name,
             logo: c.logo_url,
             bgColor: c.background_color,
-            products: c.products.map(p => ({
+            products: products.filter(p => p.company_id === c.company_id && p.is_active !== false).map(p => ({
                 id: p.product_id,
                 name: p.product_name,
                 price: p.price,
@@ -83,8 +77,26 @@ const StorageManager = {
     },
 
     async getCompanyById(companyId) {
-        const companies = await this.getCompanies();
-        return companies.find(c => c.id === companyId);
+        const res = await fetch(`http://localhost:3000/api/companies/${companyId}`);
+        if (!res.ok) return null;
+        const c = await res.json();
+        // Fetch products for this company
+        const resProducts = await fetch('http://localhost:3000/api/products');
+        const products = await resProducts.json();
+        return {
+            id: c.company_id,
+            name: c.company_name,
+            logo: c.logo_url,
+            bgColor: c.background_color,
+            products: products.filter(p => p.company_id === c.company_id && p.is_active !== false).map(p => ({
+                id: p.product_id,
+                name: p.product_name,
+                price: p.price,
+                gram: p.weight,
+                stock: p.stock_quantity,
+                image: p.icon_emoji || ""
+            }))
+        };
     },
 
     // ==================== CUSTOMER AUTHENTICATION ====================
