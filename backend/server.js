@@ -34,27 +34,12 @@ function compareHash(str, hash) {
     return simpleHash(str) === hash;
 }
 
-// Routes
-app.get('/api/products', (req, res) => {
-    const products = [
-        { id: 101, company_id: 1, product_name: "Wireless Mouse", price: 1299, weight: "120g", stock_quantity: 50 },
-        { id: 102, company_id: 1, product_name: "Mechanical Keyboard", price: 4999, weight: "980g", stock_quantity: 30 },
-        { id: 103, company_id: 1, product_name: "USB Hub", price: 899, weight: "85g", stock_quantity: 100 },
-        { id: 201, company_id: 2, product_name: "Kitchen Knife Set", price: 2499, weight: "450g", stock_quantity: 25 },
-        { id: 202, company_id: 2, product_name: "Glass Storage Jars", price: 799, weight: "1200g", stock_quantity: 60 },
-        { id: 203, company_id: 2, product_name: "LED Bulbs Pack", price: 599, weight: "240g", stock_quantity: 150 },
-        { id: 301, company_id: 3, product_name: "Cotton T-Shirt", price: 599, weight: "180g", stock_quantity: 75 },
-        { id: 302, company_id: 3, product_name: "Denim Jeans", price: 1999, weight: "550g", stock_quantity: 40 },
-        { id: 303, company_id: 3, product_name: "Sneakers", price: 2499, weight: "800g", stock_quantity: 35 },
-        { id: 401, company_id: 4, product_name: "Face Cream", price: 899, weight: "50g", stock_quantity: 80 },
-        { id: 402, company_id: 4, product_name: "Shampoo", price: 449, weight: "200ml", stock_quantity: 100 },
-        { id: 403, company_id: 4, product_name: "Lipstick", price: 599, weight: "4g", stock_quantity: 60 },
-        { id: 501, company_id: 5, product_name: "Yoga Mat", price: 1299, weight: "1200g", stock_quantity: 45 },
-        { id: 502, company_id: 5, product_name: "Dumbbells Set", price: 2999, weight: "5000g", stock_quantity: 20 },
-        { id: 503, company_id: 5, product_name: "Resistance Bands", price: 799, weight: "150g", stock_quantity: 70 }
-    ];
-    res.json(products);
-});
+
+// API routes for companies and products
+const companiesRouter = require('./routes/companies');
+const productsRouter = require('./routes/products');
+app.use('/api/companies', companiesRouter);
+app.use('/api/products', productsRouter);
 
 app.post('/api/register', (req, res) => {
     const { name, email, phone, location, pan, password } = req.body || {};
