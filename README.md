@@ -1,43 +1,46 @@
-# Pranil Store (appstore2html)
+# Pranil Store
 
-This repository contains a small e-commerce demo with a frontend (static) and a Node.js + MySQL backend.
+## Setup Instructions
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/ShirishMaharjanX/pranilstore.git
+   cd pranilstore
+   ```
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+3. Configure environment variables:
+   - Create a `.env` file based on the `.env.example` file provided.
+   - Fill in the required credentials for your database and any third-party services.
 
-Quick setup (backend on Windows recommended for printing):
+## Caching Configuration
+- This project utilizes caching to improve performance. Follow these steps to configure caching:
+  1. Install caching libraries (if any are specified in `package.json`):
+     ```bash
+     npm install <cache-library>
+     ```
+  2. Update your caching configuration in the configuration file (usually located in `config/cache.js`).
+  3. Ensure your caching service (e.g., Redis or Memcached) is running and accessible.
 
-1. Prepare the database
+## Deployment Guide
+1. **Build the Application**:
+   ```bash
+   npm run build
+   ```
+2. **Deploy to Your Hosting Service**:
+   - For services like Heroku:
+     ```bash
+     git push heroku main
+     ```
+   - For AWS, use the AWS CLI or Elastic Beanstalk according to their documentation.
+3. **Monitor the Deployment**:
+   - Check your hosting service for deployment status.
+   - Review logs to ensure everything started successfully.
 
-   - Create MySQL database named `pranil_ecommerce` (or update `.env`).
-   - Run SQL schema: `database/schema.sql`.
+## Contributing
+- Feel free to open issues for any bugs or feature requests.
+- Pull requests are welcome! Please ensure you follow the existing code style and tests are included.
 
-2. Configure environment
-
-   - Copy `.env.example` to `.env` and update values (especially `JWT_SECRET` and `FRONTEND_ORIGIN`).
-
-3. Install backend dependencies and start server
-
-```powershell
-cd backend
-npm install
-node server.js
-```
-
-4. Frontend
-
-   - Frontend is static and can be served from Netlify (already hosted) or locally.
-   - Update `frontend/app-config.js` or set `apiBase` to point to your backend (e.g. `https://office.example.com:3000`).
-
-5. Printing
-
-   - The backend prints using PowerShell `Out-Printer` and therefore must run on a Windows machine that has access to the physical printer.
-   - Set `PRINT_PRINTER_NAME` in `.env` to the exact printer name (optional — default uses Windows default printer).
-
-6. Security
-
-   - Keep `JWT_SECRET` and `PRINT_SECRET` safe and never commit `.env` to git.
-   - Consider firewall rules or VPN to restrict who can call the print API.
-
-7. Cleanup (already performed)
-
-   - The repository previously contained `node_modules`; they have been removed from the git history and `.gitignore` added.
-
-If you want, I can help deploy the backend to a server or set up a small reverse proxy for secure access.
+## License
+- This project is licensed under the MIT License. See the LICENSE file for details.
