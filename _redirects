@@ -1,0 +1,7 @@
+# Netlify Redirects
+
+# Redirecting /old-url to /new-url
+/old-url /new-url 301!
+
+# Cache control example
+/assets/* /assets/ 200!
