@@ -52,11 +52,15 @@ const CustomerAuth = {
     async login() {
         const email = document.getElementById('loginEmail').value.trim();
         const password = document.getElementById('loginPassword').value;
+        const submitBtn = document.querySelector('#loginForm .auth-submit-btn');
 
         if (!email || !password) {
             showNotification('Please fill all fields', 'error');
             return;
         }
+
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Signing in...';
 
         try {
             const apiBase = (window.APP_CONFIG && window.APP_CONFIG.apiBase) || '';
@@ -69,6 +73,8 @@ const CustomerAuth = {
             const data = await resp.json();
             if (!resp.ok) {
                 showNotification(data.error || 'Login failed', 'error');
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Sign In';
                 return;
             }
 
@@ -78,11 +84,14 @@ const CustomerAuth = {
             sessionStorage.setItem('current_user', JSON.stringify(data.customer));
 
             this.currentUser = data.customer;
-            showNotification(`Welcome back, ${data.customer.name}! 🎉`, 'success');
+            showNotification(`Welcome back, ${data.customer.name}!`, 'success');
             this.closeAuthModal();
             this.updateUIForLoggedInUser(data.customer);
         } catch (e) {
             showNotification('Login failed: ' + e.message, 'error');
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Sign In';
         }
     },
 
@@ -95,6 +104,7 @@ const CustomerAuth = {
         const pan = document.getElementById('registerPan').value.trim();
         const password = document.getElementById('registerPassword').value;
         const confirmPassword = document.getElementById('registerConfirmPassword').value;
+        const submitBtn = document.querySelector('#registerForm .auth-submit-btn');
 
         // Validation
         if (!name || !email || !phone || !location || !password || !confirmPassword) {
@@ -112,14 +122,8 @@ const CustomerAuth = {
             return;
         }
 
-        const customerData = {
-            name,
-            email,
-            phone,
-            location,
-            pan,
-            password
-        };
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Creating account...';
 
         try {
             const apiBase = (window.APP_CONFIG && window.APP_CONFIG.apiBase) || '';
@@ -132,6 +136,8 @@ const CustomerAuth = {
             const data = await resp.json();
             if (!resp.ok) {
                 showNotification(data.error || 'Registration failed', 'error');
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Create Account';
                 return;
             }
 
@@ -140,11 +146,14 @@ const CustomerAuth = {
             sessionStorage.setItem('current_user_id', data.customer.customerId);
             sessionStorage.setItem('current_user', JSON.stringify(data.customer));
 
-            showNotification('✨ Registration successful! You are logged in.', 'success');
+            showNotification('Registration successful! You are now logged in.', 'success');
             this.updateUIForLoggedInUser(data.customer);
             this.closeAuthModal();
         } catch (e) {
             showNotification('Registration failed: ' + e.message, 'error');
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Create Account';
         }
     },
 

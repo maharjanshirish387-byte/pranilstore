@@ -363,6 +363,33 @@
         <div class="admin-content" id="adminContent"></div>
     </div>
 
+    <!-- ADMIN LOGIN MODAL -->
+    <div id="adminLoginModal" class="modal-overlay">
+        <div class="modal-content admin-login-modal">
+            <div class="admin-login-header">
+                <div class="admin-login-icon">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                    </svg>
+                </div>
+                <h3>Admin Access</h3>
+                <p>Enter your credentials to access the administration panel</p>
+            </div>
+            <form class="admin-login-form" onsubmit="event.preventDefault(); Admin.login();">
+                <div class="form-group">
+                    <label for="adminPassword">Admin Password</label>
+                    <input type="password" id="adminPassword" placeholder="Enter admin password" required autocomplete="current-password">
+                </div>
+                <p id="adminLoginError" class="login-error"></p>
+                <div class="modal-actions">
+                    <button type="submit" class="btn-primary">Access Panel</button>
+                    <button type="button" class="btn-secondary" onclick="Admin.closeAdminLoginModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- EDIT MODALS -->
     <div id="editModal" class="modal-overlay">
         <div class="modal-content">

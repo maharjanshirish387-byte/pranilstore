@@ -35,7 +35,16 @@ const Cart = {
 
         // Show/hide footer
         if (this.items.length === 0) {
-            cartItemsContainer.innerHTML = '<p class="empty-cart">🛒 Your cart is empty</p>';
+            cartItemsContainer.innerHTML = `
+                <div class="empty-cart-state">
+                    <svg width="64" height="64" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="32" cy="32" r="24"/>
+                        <path d="M24 40h16M24 32h16M24 24h8"/>
+                    </svg>
+                    <p>Your cart is empty</p>
+                    <span>Browse our products and add items to your cart</span>
+                </div>
+            `;
             cartFooter.style.display = 'none';
         } else {
             cartFooter.style.display = 'block';
@@ -44,19 +53,25 @@ const Cart = {
             cartItemsContainer.innerHTML = this.items.map((item, index) => `
                 <div class="cart-item">
                     <div class="cart-item-info">
-                        <span class="cart-item-icon">${item.image}</span>
+                        <span class="cart-item-icon">${item.image || '📦'}</span>
                         <div class="cart-item-details">
                             <strong>${item.name}</strong>
                             <small>${item.companyName}</small>
                             <div class="cart-item-price">NPR ${item.price.toLocaleString()}</div>
                         </div>
                     </div>
-                    <button class="remove-btn" onclick="Cart.removeFromCart(${index})">🗑️</button>
+                    <button class="remove-btn" onclick="Cart.removeFromCart(${index})">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="3 6 5 6 21 6"/>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                        </svg>
+                    </button>
                 </div>
             `).join('');
 
             // Update total
             document.getElementById('totalAmount').textContent = `NPR ${this.calculateTotal().toLocaleString()}`;
+            document.getElementById('totalAmountFinal').textContent = `NPR ${this.calculateTotal().toLocaleString()}`;
         }
     },
 
@@ -82,11 +97,12 @@ const Cart = {
     },
 
     // Checkout
-    checkout() {
+    async checkout() {
         const name = document.getElementById('customerName').value.trim();
         const phone = document.getElementById('customerPhone').value.trim();
         const location = document.getElementById('customerLocation').value.trim();
         const pan = document.getElementById('customerPan').value.trim();
+        const checkoutBtn = document.querySelector('.checkout-btn');
 
         if (!name || !phone || !location) {
             showNotification('Please fill all required fields', 'error');
@@ -97,6 +113,9 @@ const Cart = {
             showNotification('Your cart is empty', 'error');
             return;
         }
+
+        checkoutBtn.disabled = true;
+        checkoutBtn.textContent = 'Processing...';
 
         const currentUser = StorageManager.getCurrentUser();
         const customerId = currentUser ? currentUser.customerId : null;
@@ -123,26 +142,24 @@ const Cart = {
         const receipt = this.generateReceipt(order);
 
         // Try to send to office printer via backend; fall back to browser print
-        (async () => {
-            try {
-                const printUrl = (window.APP_CONFIG && window.APP_CONFIG.printApiUrl) || '/api/print-order';
-                const resp = await fetch(printUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ order })
-                });
+        try {
+            const printUrl = (window.APP_CONFIG && window.APP_CONFIG.printApiUrl) || '/api/print-order';
+            const resp = await fetch(printUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ order })
+            });
 
-                if (resp.ok) {
-                    showNotification('Sent order to office printer', 'success');
-                } else {
-                    console.warn('Server print failed, falling back to browser print');
-                    this.printReceipt(receipt);
-                }
-            } catch (e) {
-                console.warn('Could not reach print server, using browser print', e);
+            if (resp.ok) {
+                showNotification('Order sent to printer', 'success');
+            } else {
+                console.warn('Server print failed, falling back to browser print');
                 this.printReceipt(receipt);
             }
-        })();
+        } catch (e) {
+            console.warn('Could not reach print server, using browser print', e);
+            this.printReceipt(receipt);
+        }
 
         // Clear cart
         this.items = [];
@@ -155,7 +172,10 @@ const Cart = {
             document.getElementById('customerPan').value = '';
         }
 
-        showNotification('✅ Order placed successfully!', 'success');
+        checkoutBtn.disabled = false;
+        checkoutBtn.textContent = 'Complete Purchase';
+        
+        showNotification('Order placed successfully!', 'success');
 
         setTimeout(() => {
             this.toggleCart();

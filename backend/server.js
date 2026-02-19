@@ -12,8 +12,11 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Middleware
-const FRONTEND_ORIGIN = process.env.FRONTEND_ORIGIN || '*';
-app.use(cors({ origin: FRONTEND_ORIGIN }));
+const FRONTEND_ORIGIN = process.env.FRONTEND_ORIGIN || 'http://localhost:5500';
+app.use(cors({ 
+    origin: FRONTEND_ORIGIN === '*' ? true : FRONTEND_ORIGIN,
+    credentials: true 
+}));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
@@ -50,24 +53,8 @@ app.get('/api/products', (req, res) => {
         }
         res.json(results);
     });
-});
 
-app.post('/api/login', (req, res) => {
-    const { username, password } = req.body;
-    
-    db.query('SELECT * FROM users WHERE username = ?', [username], (err, results) => {
-        if (err) {
-            return res.status(500).json({ error: err.message });
-        }
-        
-        if (results.length === 0) {
-            return res.status(401).json({ error: 'Invalid credentials' });
-        }
-        
-        // Add password verification here
-        res.json({ success: true, user: results[0] });
-    });
-});
+// Start server
 
 // Start server
 app.listen(PORT, () => {

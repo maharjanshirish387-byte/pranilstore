@@ -10,21 +10,48 @@ const Admin = {
     // Show admin panel
     showAdminPanel() {
         if (!this.isLoggedIn && !StorageManager.isAdminLoggedIn()) {
-            const password = prompt('Enter admin password:');
-            if (password === 'admin123') {
-                this.isLoggedIn = true;
-                StorageManager.setAdminLoggedIn(true);
-                showNotification('Admin access granted', 'success');
-            } else {
-                showNotification('Incorrect password', 'error');
-                return;
-            }
+            this.showAdminLoginModal();
+            return;
         }
         
         const panel = document.getElementById('adminPanel');
         panel.classList.add('active');
         this.renderAdminHeader();
         this.showView('overview');
+    },
+
+    // Show admin login modal
+    showAdminLoginModal() {
+        document.getElementById('adminLoginModal').classList.add('active');
+        document.getElementById('adminPassword').value = '';
+        document.getElementById('adminLoginError').classList.remove('visible');
+    },
+
+    // Close admin login modal
+    closeAdminLoginModal() {
+        document.getElementById('adminLoginModal').classList.remove('active');
+    },
+
+    // Admin login
+    login() {
+        const password = document.getElementById('adminPassword').value;
+        const errorEl = document.getElementById('adminLoginError');
+        
+        if (password === StorageManager.ADMIN_PASSWORD) {
+            this.isLoggedIn = true;
+            StorageManager.setAdminLoggedIn(true);
+            this.closeAdminLoginModal();
+            showNotification('Admin access granted', 'success');
+            
+            const panel = document.getElementById('adminPanel');
+            panel.classList.add('active');
+            this.renderAdminHeader();
+            this.showView('overview');
+        } else {
+            errorEl.textContent = 'Incorrect password. Please try again.';
+            errorEl.classList.add('visible');
+            document.getElementById('adminPassword').value = '';
+        }
     },
 
     // Render Admin Header with Navigation
