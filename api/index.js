@@ -1,13 +1,19 @@
 const express = require('express');
 const cors = require('cors');
+const { Redis } = require('@upstash/redis');
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// In-memory store (resets on each deployment)
-// For production, use Vercel KV or another database
-let store = {
+// Initialize Redis client
+const redis = new Redis({
+  url: process.env.REDIS_URL || 'ADD_YOUR_REDIS_URL_HERE',
+  token: process.env.REDIS_TOKEN || ''
+});
+
+// Default data
+const defaultData = {
   companies: [
     { id: 1, name: "Tech Solutions", logo: "🔧", bgColor: "#667eea", isActive: true },
     { id: 2, name: "Home Essentials", logo: "🏠", bgColor: "#f093fb", isActive: true },
@@ -35,94 +41,147 @@ let store = {
   orders: []
 };
 
-// Companies
-app.get('/api/companies', (req, res) => {
-  const activeCompanies = store.companies.filter(c => c.isActive);
-  res.json(activeCompanies);
+// Initialize data if not exists
+async function initData() {
+  try {
+    const companies = await redis.get('companies');
+    if (!companies) {
+      await redis.set('companies', JSON.stringify(defaultData.companies));
+      await redis.set('products', JSON.stringify(defaultData.products));
+      await redis.set('orders', JSON.stringify(defaultData.orders));
+    }
+  } catch (e) {
+    console.error('Redis init error:', e.message);
+  }
+}
+initData();
+
+// Helper functions
+async function getData(key) {
+  try {
+    const data = await redis.get(key);
+    return data ? JSON.parse(data) : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+async function setData(key, data) {
+  try {
+    await redis.set(key, JSON.stringify(data));
+  } catch (e) {
+    console.error('Redis set error:', e.message);
+  }
+}
+
+// Companies API
+app.get('/api/companies', async (req, res) => {
+  const companies = await getData('companies');
+  res.json(companies.filter(c => c.isActive));
 });
 
-app.post('/api/companies', (req, res) => {
+app.post('/api/companies', async (req, res) => {
+  const companies = await getData('companies');
   const { name, logo, bgColor } = req.body;
-  const id = Math.max(...store.companies.map(c => c.id)) + 1;
+  const id = Math.max(...companies.map(c => c.id), 0) + 1;
   const company = { id, name, logo: logo || '🏪', bgColor: bgColor || '#000000', isActive: true };
-  store.companies.push(company);
+  companies.push(company);
+  await setData('companies', companies);
   res.json(company);
 });
 
-app.patch('/api/companies/:id', (req, res) => {
-  const idx = store.companies.findIndex(c => c.id === parseInt(req.params.id));
+app.patch('/api/companies/:id', async (req, res) => {
+  const companies = await getData('companies');
+  const idx = companies.findIndex(c => c.id === parseInt(req.params.id));
   if (idx === -1) return res.status(404).json({ error: 'Not found' });
-  store.companies[idx] = { ...store.companies[idx], ...req.body };
-  res.json(store.companies[idx]);
+  companies[idx] = { ...companies[idx], ...req.body };
+  await setData('companies', companies);
+  res.json(companies[idx]);
 });
 
-app.delete('/api/companies/:id', (req, res) => {
-  const idx = store.companies.findIndex(c => c.id === parseInt(req.params.id));
-  if (idx !== -1) store.companies[idx].isActive = false;
+app.delete('/api/companies/:id', async (req, res) => {
+  const companies = await getData('companies');
+  const idx = companies.findIndex(c => c.id === parseInt(req.params.id));
+  if (idx !== -1) {
+    companies[idx].isActive = false;
+    await setData('companies', companies);
+  }
   res.json({ success: true });
 });
 
-// Products
-app.get('/api/products', (req, res) => {
+// Products API
+app.get('/api/products', async (req, res) => {
+  const products = await getData('products');
   const { companyId } = req.query;
-  let products = store.products.filter(p => p.isActive !== false);
-  if (companyId) products = products.filter(p => p.companyId === parseInt(companyId));
-  res.json(products);
+  let result = products.filter(p => p.isActive !== false);
+  if (companyId) result = result.filter(p => p.companyId === parseInt(companyId));
+  res.json(result);
 });
 
-app.post('/api/products', (req, res) => {
+app.post('/api/products', async (req, res) => {
+  const products = await getData('products');
   const { companyId, name, price, gram, stock, image } = req.body;
-  const id = Math.max(...store.products.map(p => p.id)) + 1;
+  const id = Math.max(...products.map(p => p.id), 100) + 1;
   const product = { id, companyId, name, price, gram, stock, image };
-  store.products.push(product);
+  products.push(product);
+  await setData('products', products);
   res.json(product);
 });
 
-app.patch('/api/products/:id', (req, res) => {
-  const idx = store.products.findIndex(p => p.id === parseInt(req.params.id));
+app.patch('/api/products/:id', async (req, res) => {
+  const products = await getData('products');
+  const idx = products.findIndex(p => p.id === parseInt(req.params.id));
   if (idx === -1) return res.status(404).json({ error: 'Not found' });
-  store.products[idx] = { ...store.products[idx], ...req.body };
-  res.json(store.products[idx]);
+  products[idx] = { ...products[idx], ...req.body };
+  await setData('products', products);
+  res.json(products[idx]);
 });
 
-app.delete('/api/products/:id', (req, res) => {
-  const idx = store.products.findIndex(p => p.id === parseInt(req.params.id));
-  if (idx !== -1) store.products[idx].isActive = false;
+app.delete('/api/products/:id', async (req, res) => {
+  const products = await getData('products');
+  const idx = products.findIndex(p => p.id === parseInt(req.params.id));
+  if (idx !== -1) {
+    products[idx].isActive = false;
+    await setData('products', products);
+  }
   res.json({ success: true });
 });
 
-// Orders
-app.post('/api/orders', (req, res) => {
+// Orders API
+app.post('/api/orders', async (req, res) => {
+  const orders = await getData('orders');
+  const products = await getData('products');
   const { customer, items, total } = req.body;
-  const order = {
-    id: Date.now(),
-    customer,
-    items,
-    total,
-    createdAt: new Date().toISOString()
-  };
-  store.orders.push(order);
+  
+  const order = { id: Date.now(), customer, items, total, createdAt: new Date().toISOString() };
+  orders.push(order);
   
   // Decrease stock
   items.forEach(item => {
-    const product = store.products.find(p => p.id === item.id);
+    const product = products.find(p => p.id === item.id);
     if (product && product.stock > 0) product.stock--;
   });
   
+  await setData('orders', orders);
+  await setData('products', products);
   res.json({ success: true, orderId: order.id });
 });
 
-app.get('/api/orders', (req, res) => {
-  res.json(store.orders);
+app.get('/api/orders', async (req, res) => {
+  const orders = await getData('orders');
+  res.json(orders);
 });
 
-// Stats
-app.get('/api/stats', (req, res) => {
+// Stats API
+app.get('/api/stats', async (req, res) => {
+  const companies = await getData('companies');
+  const products = await getData('products');
+  const orders = await getData('orders');
   res.json({
-    companies: store.companies.filter(c => c.isActive).length,
-    products: store.products.filter(p => p.isActive !== false).length,
-    orders: store.orders.length,
-    revenue: store.orders.reduce((sum, o) => sum + o.total, 0)
+    companies: companies.filter(c => c.isActive).length,
+    products: products.filter(p => p.isActive !== false).length,
+    orders: orders.length,
+    revenue: orders.reduce((sum, o) => sum + o.total, 0)
   });
 });
 
