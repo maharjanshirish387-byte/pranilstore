@@ -1,1 +1,24 @@
-{\n  "name": "pranilstore",\n  "version": "1.0.0",\n  "private": true,\n  "workspaces": [\n    "packages/*"\n  ],\n  "dependencies": {\n    "react": "^17.0.0",\n    "react-dom": "^17.0.0",\n    "express": "^4.17.1",\n    "mongoose": "^5.10.9"\n  }\n}
+{
+  "name": "pranilstore",
+  "version": "1.0.0",
+  "description": "Pranilstore - Monorepo with Frontend, Backend, and API services",
+  "private": true,
+  "workspaces": [
+    "frontend",
+    "backend",
+    "api"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces",
+    "start": "npm start --workspaces",
+    "dev": "npm run dev --workspaces",
+    "test": "npm test --workspaces",
+    "install-all": "npm install && npm install --workspaces"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}
