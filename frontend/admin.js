@@ -101,7 +101,7 @@ const Admin = {
     },
 
     // Show specific view
-    async showView(viewName) {
+    showView(viewName) {
         this.currentView = viewName;
         const content = document.getElementById('adminContent');
         
@@ -113,16 +113,16 @@ const Admin = {
 
         switch(viewName) {
             case 'overview':
-                await this.renderOverview(content);
+                this.renderOverview(content);
                 break;
             case 'companies':
-                await this.renderCompaniesManagement(content);
+                this.renderCompaniesManagement(content);
                 break;
             case 'products':
-                await this.renderProductsManagement(content);
+                this.renderProductsManagement(content);
                 break;
             case 'orders':
-                await this.renderOrdersManagement(content);
+                this.renderOrdersManagement(content);
                 break;
         }
     },
@@ -267,8 +267,8 @@ const Admin = {
     },
 
     // Render Companies Management
-    async renderCompaniesManagement(content) {
-        const companies = await StorageManager.getCompanies();
+    renderCompaniesManagement(content) {
+        const companies = StorageManager.getCompanies();
 
         content.innerHTML = `
             <div class="admin-section">
@@ -287,13 +287,15 @@ const Admin = {
                 </div>
 
                 <div class="companies-list">
-                    ${companies.map(company => `
+                    ${companies.length === 0 ? '<p style="padding: 2rem; text-align: center; color: #666;">No companies yet. Add your first company!</p>' : companies.map(company => {
+                        const companyProducts = StorageManager.getProducts(company.id);
+                        return `
                         <div class="company-item-admin">
                             <div class="company-item-header">
-                                <img src="${company.logo}" alt="${company.name}" class="company-item-logo">
+                                <img src="${company.logo}" alt="${company.name}" class="company-item-logo" onerror="this.src='https://placehold.co/100x100/000/fff?text=${company.name.charAt(0)}'">
                                 <div class="company-item-info">
                                     <h3>${company.name}</h3>
-                                    <p>${company.products.length} Products</p>
+                                    <p>${companyProducts.length} Products</p>
                                 </div>
                                 <div class="company-item-actions">
                                     <button class="btn-icon" onclick="Admin.showEditCompanyModal(${company.id})" title="Edit Company">
@@ -318,8 +320,8 @@ const Admin = {
     },
 
     // Render Products Management
-    async renderProductsManagement(content) {
-        const companies = await StorageManager.getCompanies();
+    renderProductsManagement(content) {
+        const companies = StorageManager.getCompanies();
 
         content.innerHTML = `
             <div class="admin-section">
@@ -408,7 +410,7 @@ const Admin = {
     },
 
     // Render Orders Management
-    async renderOrdersManagement(content) {
+    renderOrdersManagement(content) {
         const orders = await Database.select('orders');
         const ordersWithItems = [];
 
@@ -522,7 +524,7 @@ const Admin = {
             return;
         }
 
-        await StorageManager.addProduct(product);
+        StorageManager.addProduct(product);
 
         this.productImageBase64 = null;
         this.closeEditModal();
@@ -533,7 +535,7 @@ const Admin = {
 
     // Edit Product
     async editProduct(companyId, productId) {
-        const company = await StorageManager.getCompanyById(companyId);
+        const company = StorageManager.getCompanyById(companyId);
         const product = company.products.find(p => p.id === productId);
 
         if (!product) return;
@@ -586,7 +588,7 @@ const Admin = {
             return;
         }
 
-        await StorageManager.updateProduct(productId, updatedProduct);
+        StorageManager.updateProduct(productId, updatedProduct);
 
         this.productImageBase64 = null;
         this.closeEditModal();
@@ -616,7 +618,7 @@ const Admin = {
     async deleteProduct(companyId, productId) {
         if (!confirm('Are you sure you want to delete this product?')) return;
 
-        await StorageManager.deleteProduct(productId);
+        StorageManager.deleteProduct(productId);
         });
 
         showNotification('Product deleted successfully', 'success');
@@ -626,13 +628,13 @@ const Admin = {
 
     // Delete Company
     async deleteCompany(companyId) {
-        const company = await StorageManager.getCompanyById(companyId);
+        const company = StorageManager.getCompanyById(companyId);
         
         if (!confirm(`Are you sure you want to delete "${company.name}" and all its products? This action cannot be undone.`)) {
             return;
         }
 
-        await StorageManager.deleteCompany(companyId);
+        StorageManager.deleteCompany(companyId);
 
         showNotification('Company deleted successfully', 'success');
         await this.showView('companies');
@@ -734,7 +736,7 @@ const Admin = {
 
     // Show Edit Company Modal
     async showEditCompanyModal(companyId) {
-        const companies = await StorageManager.getCompanies();
+        const companies = StorageManager.getCompanies();
         const company = companies.find(c => c.id === companyId);
         if (!company) return;
 
@@ -802,7 +804,7 @@ const Admin = {
         reader.onload = async (e) => {
             const logoBase64 = e.target.result;
 
-            await StorageManager.addCompany({
+            StorageManager.addCompany({
                 name: name,
                 logo: logoBase64,
                 bgColor: bgColor
@@ -836,7 +838,7 @@ const Admin = {
             const reader = new FileReader();
             reader.onload = async (e) => {
                 logoBase64 = e.target.result;
-                await StorageManager.updateCompany(companyId, {
+                StorageManager.updateCompany(companyId, {
                     name: name,
                     logo: logoBase64,
                     bgColor: bgColor
@@ -848,7 +850,7 @@ const Admin = {
             };
             reader.readAsDataURL(logoFile);
         } else {
-            await StorageManager.updateCompany(companyId, {
+            StorageManager.updateCompany(companyId, {
                 name: name,
                 bgColor: bgColor
             });

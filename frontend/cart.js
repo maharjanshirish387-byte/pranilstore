@@ -85,7 +85,7 @@ const Cart = {
 
             // Auto-fill if logged in
             if (StorageManager.isCustomerLoggedIn()) {
-                const customer = await StorageManager.getCurrentUser();
+                const customer = StorageManager.getCurrentUser();
                 if (customer) {
                     document.getElementById('customerName').value = customer.name;
                     document.getElementById('customerPhone').value = customer.phone;
@@ -117,11 +117,11 @@ const Cart = {
         checkoutBtn.disabled = true;
         checkoutBtn.textContent = 'Processing...';
 
-        const currentUser = await StorageManager.getCurrentUser();
+        const currentUser = StorageManager.getCurrentUser();
         const customerId = currentUser ? currentUser.customerId : null;
 
         const order = {
-            orderId: StorageManager.generateOrderId(),
+            orderId: 'ORD-' + Date.now(),
             customerId: customerId,
             customer: {
                 name,
@@ -136,7 +136,7 @@ const Cart = {
             status: 'completed'
         };
 
-        await StorageManager.saveOrder(order);
+        StorageManager.createOrder(order);
 
         // Generate receipt text
         const receipt = this.generateReceipt(order);
