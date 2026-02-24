@@ -2,23 +2,128 @@
 
 let currentCompanyId = null;
 let currentUser = null;
+let allCompanies = [];
+let searchQuery = '';
 
 // Show companies view
 function showCompanies() {
     document.getElementById('companyView').style.display = 'block';
     document.getElementById('productsView').style.display = 'none';
     currentCompanyId = null;
-    // hide products background when returning to companies
     const bg = document.getElementById('productsBg');
     if (bg) bg.style.opacity = '0';
+    
+    // Reset search
+    document.getElementById('searchInput').value = '';
+    document.getElementById('searchClear').style.display = 'none';
+    searchQuery = '';
+    renderCompanies();
+}
+
+// Search functionality
+function handleSearch(event) {
+    searchQuery = event.target.value.toLowerCase();
+    const clearBtn = document.getElementById('searchClear');
+    clearBtn.style.display = searchQuery ? 'block' : 'none';
+    
+    if (searchQuery.length >= 2) {
+        showSearchResults(searchQuery);
+    } else if (searchQuery.length === 0) {
+        renderCompanies();
+    }
+}
+
+function clearSearch() {
+    document.getElementById('searchInput').value = '';
+    document.getElementById('searchClear').style.display = 'none';
+    searchQuery = '';
+    renderCompanies();
+}
+
+async function showSearchResults(query) {
+    const companies = await StorageManager.getCompanies();
+    const results = [];
+    
+    companies.forEach(company => {
+        company.products.forEach(product => {
+            if (product.name.toLowerCase().includes(query) || 
+                company.name.toLowerCase().includes(query)) {
+                results.push({ ...product, company });
+            }
+        });
+    });
+    
+    renderSearchResults(results, query);
+}
+
+function renderSearchResults(results, query) {
+    document.getElementById('companyView').style.display = 'block';
+    document.getElementById('productsView').style.display = 'none';
+    
+    const grid = document.getElementById('companiesGrid');
+    grid.innerHTML = `
+        <div class="search-results-header">
+            <h2>Search Results for "${query}"</h2>
+            <p>Found ${results.length} products</p>
+        </div>
+    `;
+    
+    if (results.length === 0) {
+        grid.innerHTML += `
+            <div class="empty-state">
+                <p>No products found for "${query}"</p>
+                <button class="btn-primary" onclick="showCompanies()">Browse All Products</button>
+            </div>
+        `;
+        return;
+    }
+    
+    // Show products directly
+    results.forEach(product => {
+        const card = document.createElement('div');
+        card.className = 'product-card search-result-card';
+        card.onclick = () => showProducts(product.company.id);
+        
+        let stockClass = product.stock > 10 ? 'in-stock' : (product.stock > 0 ? 'low-stock' : 'out-of-stock');
+        let stockText = product.stock > 10 ? `In Stock (${product.stock})` : (product.stock > 0 ? `Low Stock (${product.stock})` : 'Out of Stock');
+        
+        card.innerHTML = `
+            <div class="product-image">${product.image ? `<span class="product-emoji">${product.image}</span>` : '<div class="product-placeholder"></div>'}</div>
+            <div class="product-details">
+                <p class="product-company">${product.company.name}</p>
+                <h3>${product.name}</h3>
+                <div class="product-meta">
+                    <span class="price">NPR ${product.price.toLocaleString()}</span>
+                    <span class="weight">${product.gram}</span>
+                </div>
+                <div class="stock-badge ${stockClass}">${stockText}</div>
+            </div>
+        `;
+        grid.appendChild(card);
+    });
+}
+
+// Hide loading screen
+function hideLoading() {
+    const loader = document.getElementById('loadingScreen');
+    loader.classList.add('hidden');
+    setTimeout(() => loader.style.display = 'none', 500);
 }
 
 // Initialize app
 document.addEventListener('DOMContentLoaded', async () => {
-    await StorageManager.init();
-    await renderCompanies();
-    await CustomerAuth.checkAuthStatus();
-    Admin.checkAdminStatus();
+    try {
+        await StorageManager.init();
+        allCompanies = await StorageManager.getCompanies();
+        await renderCompanies();
+        await CustomerAuth.checkAuthStatus();
+        Admin.checkAdminStatus();
+    } catch (error) {
+        console.error('Initialization error:', error);
+        showNotification('Failed to load. Please refresh the page.', 'error');
+    } finally {
+        hideLoading();
+    }
 
     // Keyboard shortcuts
     document.addEventListener('keydown', (e) => {
