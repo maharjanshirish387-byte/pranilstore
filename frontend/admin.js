@@ -128,16 +128,9 @@ const Admin = {
     },
 
     // Render Overview Dashboard
-    async renderOverview(content) {
-        const companies = await StorageManager.getCompanies();
-        const orders = await Database.select('orders');
-        const allProducts = await Database.select('products', { is_active: true });
+    renderOverview(content) {
+        const stats = StorageManager.getStats();
         
-        const totalProducts = allProducts.length;
-        const totalRevenue = orders.reduce((sum, o) => sum + (parseFloat(o.total_amount) || 0), 0);
-        const lowStockProducts = allProducts.filter(p => p.stock_quantity > 0 && p.stock_quantity <= 10).length;
-        const outOfStockProducts = allProducts.filter(p => p.stock_quantity === 0).length;
-
         content.innerHTML = `
             <div class="admin-overview">
                 <div class="overview-header">
@@ -156,7 +149,7 @@ const Admin = {
                             </svg>
                         </div>
                         <div class="stat-info-admin">
-                            <div class="stat-value-admin">${companies.length}</div>
+                            <div class="stat-value-admin">${stats.companies}</div>
                             <div class="stat-label-admin">Total Companies</div>
                         </div>
                     </div>
@@ -168,7 +161,7 @@ const Admin = {
                             </svg>
                         </div>
                         <div class="stat-info-admin">
-                            <div class="stat-value-admin">${totalProducts}</div>
+                            <div class="stat-value-admin">${stats.products}</div>
                             <div class="stat-label-admin">Total Products</div>
                         </div>
                     </div>
@@ -182,7 +175,7 @@ const Admin = {
                             </svg>
                         </div>
                         <div class="stat-info-admin">
-                            <div class="stat-value-admin">${orders.length}</div>
+                            <div class="stat-value-admin">${stats.orders}</div>
                             <div class="stat-label-admin">Total Orders</div>
                         </div>
                     </div>
@@ -195,7 +188,7 @@ const Admin = {
                             </svg>
                         </div>
                         <div class="stat-info-admin">
-                            <div class="stat-value-admin">NPR ${totalRevenue.toLocaleString()}</div>
+                            <div class="stat-value-admin">NPR ${stats.revenue.toLocaleString()}</div>
                             <div class="stat-label-admin">Total Revenue</div>
                         </div>
                     </div>

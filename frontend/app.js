@@ -114,8 +114,8 @@ function hideLoading() {
 document.addEventListener('DOMContentLoaded', async () => {
     try {
         await StorageManager.init();
-        allCompanies = await StorageManager.getCompanies();
-        await renderCompanies();
+        allCompanies = StorageManager.getCompaniesWithProducts();
+        renderCompanies();
         await CustomerAuth.checkAuthStatus();
         Admin.checkAdminStatus();
     } catch (error) {
@@ -166,10 +166,21 @@ function showNotification(message, type = 'success') {
 }
 
 // Render companies on page load
-async function renderCompanies() {
-    const companies = await StorageManager.getCompanies();
+function renderCompanies() {
+    const companies = StorageManager.getCompaniesWithProducts();
     const grid = document.getElementById('companiesGrid');
     grid.innerHTML = '';
+
+    if (companies.length === 0) {
+        grid.innerHTML = `
+            <div class="empty-state" style="grid-column: 1/-1; padding: 3rem;">
+                <h3>No companies yet</h3>
+                <p>Admin can add companies from the admin panel</p>
+                <button class="btn-primary" onclick="Admin.showAdminPanel()" style="margin-top: 1rem;">Go to Admin Panel</button>
+            </div>
+        `;
+        return;
+    }
 
     companies.forEach((company, index) => {
         const card = document.createElement('div');
@@ -178,7 +189,7 @@ async function renderCompanies() {
         card.style.backgroundColor = company.bgColor;
 
         card.innerHTML = `
-            <img src="${company.logo}" alt="${company.name}" class="company-logo-img">
+            <img src="${company.logo}" alt="${company.name}" class="company-logo-img" onerror="this.src='https://placehold.co/100x100/000/fff?text=${company.name.charAt(0)}'">
             <h3>${company.name}</h3>
             <p>${company.products.length} Products</p>
         `;
@@ -189,10 +200,11 @@ async function renderCompanies() {
 }
 
 // Show products view
-async function showProducts(companyId) {
-    const company = await StorageManager.getCompanyById(companyId);
+function showProducts(companyId) {
+    const company = StorageManager.getCompanyById(companyId);
     if (!company) return;
 
+    const products = StorageManager.getProducts(companyId);
     currentCompanyId = companyId;
     document.getElementById('companyView').style.display = 'none';
     document.getElementById('productsView').style.display = 'block';
@@ -226,7 +238,17 @@ async function showProducts(companyId) {
     const grid = document.getElementById('productsGrid');
     grid.innerHTML = '';
 
-    company.products.forEach(product => {
+    if (products.length === 0) {
+        grid.innerHTML = `
+            <div class="empty-state" style="grid-column: 1/-1; padding: 3rem;">
+                <h3>No products in this company</h3>
+                <p>Admin can add products from the admin panel</p>
+            </div>
+        `;
+        return;
+    }
+
+    products.forEach(product => {
         const card = document.createElement('div');
         card.className = 'product-card';
 
