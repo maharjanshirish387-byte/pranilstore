@@ -358,6 +358,34 @@ const CustomerAuth = {
         }
     },
 
+    // Password strength checker
+    checkPasswordStrength(password) {
+        const strengthFill = document.getElementById('strengthFill');
+        const strengthText = document.getElementById('strengthText');
+        if (!strengthFill || !strengthText) return;
+
+        let score = 0;
+        if (password.length >= 6)  score++;
+        if (password.length >= 10) score++;
+        if (/[A-Z]/.test(password)) score++;
+        if (/[0-9]/.test(password)) score++;
+        if (/[^A-Za-z0-9]/.test(password)) score++;
+
+        const levels = [
+            { label: '',         color: 'transparent', width: '0%'   },
+            { label: 'Weak',     color: '#ef4444',     width: '25%'  },
+            { label: 'Fair',     color: '#f97316',     width: '50%'  },
+            { label: 'Good',     color: '#eab308',     width: '75%'  },
+            { label: 'Strong',   color: '#22c55e',     width: '90%'  },
+            { label: 'Very Strong', color: '#16a34a',  width: '100%' },
+        ];
+        const level = levels[Math.min(score, 5)];
+        strengthFill.style.width = level.width;
+        strengthFill.style.background = level.color;
+        strengthText.textContent = level.label;
+        strengthText.style.color = level.color;
+    },
+
     // Check auth status on page load
     async checkAuthStatus() {
         if (StorageManager.isCustomerLoggedIn()) {

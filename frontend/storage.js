@@ -8,7 +8,7 @@ const StorageManager = {
     async init() {
         await Database.init();
         
-        // Initialize with seed data if no companies exist
+        // Initialize with seed data if empty
         const companies = await Database.select('companies');
         if (companies.length === 0) {
             await this.seedInitialData();
@@ -52,20 +52,24 @@ const StorageManager = {
         }
     },
 
+    // ==================== COMPANIES ====================
     async getCompanies() {
-        // Fetch companies from backend API
-        const res = await fetch('http://localhost:3000/api/companies');
-        const companies = await res.json();
-        // Fetch all products from backend API
-        const resProducts = await fetch('http://localhost:3000/api/products');
-        const products = await resProducts.json();
-        // Attach products to companies
-        return companies.filter(c => c.is_active !== false).map(c => ({
+        const companies = await Database.select('companies', { is_active: true });
+        
+        // Fetch products for each company
+        for (const company of companies) {
+            company.products = await Database.select('products', { 
+                company_id: company.company_id, 
+                is_active: true 
+            });
+        }
+
+        return companies.map(c => ({
             id: c.company_id,
             name: c.company_name,
             logo: c.logo_url,
             bgColor: c.background_color,
-            products: products.filter(p => p.company_id === c.company_id && p.is_active !== false).map(p => ({
+            products: c.products.map(p => ({
                 id: p.product_id,
                 name: p.product_name,
                 price: p.price,
@@ -77,26 +81,8 @@ const StorageManager = {
     },
 
     async getCompanyById(companyId) {
-        const res = await fetch(`http://localhost:3000/api/companies/${companyId}`);
-        if (!res.ok) return null;
-        const c = await res.json();
-        // Fetch products for this company
-        const resProducts = await fetch('http://localhost:3000/api/products');
-        const products = await resProducts.json();
-        return {
-            id: c.company_id,
-            name: c.company_name,
-            logo: c.logo_url,
-            bgColor: c.background_color,
-            products: products.filter(p => p.company_id === c.company_id && p.is_active !== false).map(p => ({
-                id: p.product_id,
-                name: p.product_name,
-                price: p.price,
-                gram: p.weight,
-                stock: p.stock_quantity,
-                image: p.icon_emoji || ""
-            }))
-        };
+        const companies = await this.getCompanies();
+        return companies.find(c => c.id === companyId);
     },
 
     // ==================== CUSTOMER AUTHENTICATION ====================
@@ -199,7 +185,7 @@ const StorageManager = {
     },
 
     isCustomerLoggedIn() {
-        return sessionStorage.getItem('current_user_id') !== null || !!sessionStorage.getItem('auth_token');
+        return sessionStorage.getItem('current_user_id') !== null;
     },
 
     async updateCustomerProfile(customerId, updates) {

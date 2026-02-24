@@ -528,7 +528,8 @@ const Admin = {
             return;
         }
 
-        await fetch('http://localhost:3000/api/products', {
+        const _apiBase = (window.APP_CONFIG && window.APP_CONFIG.apiBase) || '';
+        await fetch(`${_apiBase}/api/products`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -604,8 +605,9 @@ const Admin = {
             return;
         }
 
-        await fetch(`http://localhost:3000/api/products/${productId}`, {
-            method: 'PUT',
+        const _apiBase = (window.APP_CONFIG && window.APP_CONFIG.apiBase) || '';
+        await fetch(`${_apiBase}/api/products/${productId}`, {
+            method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 product_name: updatedProduct.name,
@@ -644,7 +646,8 @@ const Admin = {
     async deleteProduct(companyId, productId) {
         if (!confirm('Are you sure you want to delete this product?')) return;
 
-        await fetch(`http://localhost:3000/api/products/${productId}`, {
+        const _apiBase = (window.APP_CONFIG && window.APP_CONFIG.apiBase) || '';
+        await fetch(`${_apiBase}/api/products/${productId}`, {
             method: 'DELETE'
         });
 
@@ -661,7 +664,8 @@ const Admin = {
             return;
         }
 
-        await fetch(`http://localhost:3000/api/companies/${companyId}`, {
+        const _apiBase = (window.APP_CONFIG && window.APP_CONFIG.apiBase) || '';
+        await fetch(`${_apiBase}/api/companies/${companyId}`, {
             method: 'DELETE'
         });
 
@@ -835,10 +839,11 @@ const Admin = {
 
             // Get next company ID
             // Get all companies to determine nextId
-            const resCompanies = await fetch('http://localhost:3000/api/companies');
+            const _apiBase = (window.APP_CONFIG && window.APP_CONFIG.apiBase) || '';
+            const resCompanies = await fetch(`${_apiBase}/api/companies`);
             const companies = await resCompanies.json();
             const nextId = companies.length > 0 ? Math.max(...companies.map(c => c.company_id)) + 1 : 1;
-            await fetch('http://localhost:3000/api/companies', {
+            await fetch(`${_apiBase}/api/companies`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -879,8 +884,9 @@ const Admin = {
             const reader = new FileReader();
             reader.onload = async (e) => {
                 logoBase64 = e.target.result;
-                await fetch(`http://localhost:3000/api/companies/${companyId}`, {
-                    method: 'PUT',
+                const _apiBase = (window.APP_CONFIG && window.APP_CONFIG.apiBase) || '';
+                await fetch(`${_apiBase}/api/companies/${companyId}`, {
+                    method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         company_name: name,
@@ -895,8 +901,9 @@ const Admin = {
             };
             reader.readAsDataURL(logoFile);
         } else {
-            await fetch(`http://localhost:3000/api/companies/${companyId}`, {
-                method: 'PUT',
+            const _apiBase2 = (window.APP_CONFIG && window.APP_CONFIG.apiBase) || '';
+            await fetch(`${_apiBase2}/api/companies/${companyId}`, {
+                method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     company_name: name,
