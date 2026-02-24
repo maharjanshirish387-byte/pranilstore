@@ -85,6 +85,82 @@ const StorageManager = {
         return companies.find(c => c.id === companyId);
     },
 
+    // Add company
+    async addCompany(company) {
+        const companies = await Database.select('companies');
+        const maxId = companies.length > 0 ? Math.max(...companies.map(c => c.company_id)) : 0;
+        
+        const newCompany = {
+            company_id: maxId + 1,
+            company_name: company.name,
+            logo_url: company.logo,
+            background_color: company.bgColor,
+            is_active: true
+        };
+        
+        await Database.insert('companies', newCompany);
+        return newCompany;
+    },
+
+    // Update company
+    async updateCompany(companyId, updates) {
+        await Database.update('companies', { company_id: companyId }, {
+            company_name: updates.name,
+            logo_url: updates.logo,
+            background_color: updates.bgColor
+        });
+        return { success: true };
+    },
+
+    // Delete company (soft delete)
+    async deleteCompany(companyId) {
+        await Database.update('companies', { company_id: companyId }, { is_active: false });
+        return { success: true };
+    },
+
+    // ==================== PRODUCTS ====================
+    async getAllProducts() {
+        return await Database.select('products', { is_active: true });
+    },
+
+    // Add product
+    async addProduct(product) {
+        const products = await Database.select('products');
+        const maxId = products.length > 0 ? Math.max(...products.map(p => p.product_id)) : 100;
+        
+        const newProduct = {
+            product_id: maxId + 1,
+            company_id: product.company_id,
+            product_name: product.name,
+            price: product.price,
+            weight: product.gram,
+            stock_quantity: product.stock,
+            icon_emoji: product.image || "",
+            is_active: true
+        };
+        
+        await Database.insert('products', newProduct);
+        return newProduct;
+    },
+
+    // Update product
+    async updateProduct(productId, updates) {
+        await Database.update('products', { product_id: productId }, {
+            product_name: updates.name,
+            price: updates.price,
+            weight: updates.gram,
+            stock_quantity: updates.stock,
+            icon_emoji: updates.image
+        });
+        return { success: true };
+    },
+
+    // Delete product (soft delete)
+    async deleteProduct(productId) {
+        await Database.update('products', { product_id: productId }, { is_active: false });
+        return { success: true };
+    },
+
     // ==================== CUSTOMER AUTHENTICATION ====================
     async registerCustomer(customerData) {
         const { email, password, name, phone, location, pan } = customerData;

@@ -520,7 +520,8 @@ const Admin = {
             price: parseFloat(document.getElementById('editPrice').value),
             gram: document.getElementById('editGram').value.trim(),
             stock: parseInt(document.getElementById('editStock').value),
-            image: this.productImageBase64 || document.getElementById('editImage').value.trim()
+            image: this.productImageBase64 || document.getElementById('editImage').value.trim(),
+            company_id: companyId
         };
 
         if (!product.name || !product.price || !product.gram || isNaN(product.stock)) {
@@ -528,20 +529,7 @@ const Admin = {
             return;
         }
 
-        const _apiBase = (window.APP_CONFIG && window.APP_CONFIG.apiBase) || '';
-        await fetch(`${_apiBase}/api/products`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                company_id: companyId,
-                product_name: product.name,
-                price: product.price,
-                weight: product.gram,
-                stock_quantity: product.stock,
-                icon_emoji: product.image,
-                is_active: true
-            })
-        });
+        await StorageManager.addProduct(product);
 
         this.productImageBase64 = null;
         this.closeEditModal();
@@ -605,18 +593,7 @@ const Admin = {
             return;
         }
 
-        const _apiBase = (window.APP_CONFIG && window.APP_CONFIG.apiBase) || '';
-        await fetch(`${_apiBase}/api/products/${productId}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                product_name: updatedProduct.name,
-                price: updatedProduct.price,
-                weight: updatedProduct.gram,
-                stock_quantity: updatedProduct.stock,
-                icon_emoji: updatedProduct.image
-            })
-        });
+        await StorageManager.updateProduct(productId, updatedProduct);
 
         this.productImageBase64 = null;
         this.closeEditModal();
@@ -646,9 +623,7 @@ const Admin = {
     async deleteProduct(companyId, productId) {
         if (!confirm('Are you sure you want to delete this product?')) return;
 
-        const _apiBase = (window.APP_CONFIG && window.APP_CONFIG.apiBase) || '';
-        await fetch(`${_apiBase}/api/products/${productId}`, {
-            method: 'DELETE'
+        await StorageManager.deleteProduct(productId);
         });
 
         showNotification('Product deleted successfully', 'success');
@@ -664,10 +639,7 @@ const Admin = {
             return;
         }
 
-        const _apiBase = (window.APP_CONFIG && window.APP_CONFIG.apiBase) || '';
-        await fetch(`${_apiBase}/api/companies/${companyId}`, {
-            method: 'DELETE'
-        });
+        await StorageManager.deleteCompany(companyId);
 
         showNotification('Company deleted successfully', 'success');
         await this.showView('companies');
@@ -837,22 +809,10 @@ const Admin = {
         reader.onload = async (e) => {
             const logoBase64 = e.target.result;
 
-            // Get next company ID
-            // Get all companies to determine nextId
-            const _apiBase = (window.APP_CONFIG && window.APP_CONFIG.apiBase) || '';
-            const resCompanies = await fetch(`${_apiBase}/api/companies`);
-            const companies = await resCompanies.json();
-            const nextId = companies.length > 0 ? Math.max(...companies.map(c => c.company_id)) + 1 : 1;
-            await fetch(`${_apiBase}/api/companies`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    company_id: nextId,
-                    company_name: name,
-                    logo_url: logoBase64,
-                    background_color: bgColor,
-                    is_active: true
-                })
+            await StorageManager.addCompany({
+                name: name,
+                logo: logoBase64,
+                bgColor: bgColor
             });
 
             this.closeAddCompanyModal();
@@ -878,21 +838,15 @@ const Admin = {
             return;
         }
 
-        // Always update company via API
         let logoBase64 = null;
         if (logoFile) {
             const reader = new FileReader();
             reader.onload = async (e) => {
                 logoBase64 = e.target.result;
-                const _apiBase = (window.APP_CONFIG && window.APP_CONFIG.apiBase) || '';
-                await fetch(`${_apiBase}/api/companies/${companyId}`, {
-                    method: 'PATCH',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        company_name: name,
-                        logo_url: logoBase64,
-                        background_color: bgColor
-                    })
+                await StorageManager.updateCompany(companyId, {
+                    name: name,
+                    logo: logoBase64,
+                    bgColor: bgColor
                 });
                 this.closeEditCompanyModal();
                 showNotification('Company updated successfully', 'success');
@@ -901,14 +855,9 @@ const Admin = {
             };
             reader.readAsDataURL(logoFile);
         } else {
-            const _apiBase2 = (window.APP_CONFIG && window.APP_CONFIG.apiBase) || '';
-            await fetch(`${_apiBase2}/api/companies/${companyId}`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    company_name: name,
-                    background_color: bgColor
-                })
+            await StorageManager.updateCompany(companyId, {
+                name: name,
+                bgColor: bgColor
             });
             this.closeEditCompanyModal();
             showNotification('Company updated successfully', 'success');
