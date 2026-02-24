@@ -130,6 +130,11 @@ const Admin = {
     // Render Overview Dashboard
     async renderOverview(content) {
         const stats = await StorageManager.getStats();
+        const companies = await StorageManager.getCompanies();
+        const allProducts = companies.flatMap(c => c.products);
+        
+        const lowStockProducts = allProducts.filter(p => p.stock > 0 && p.stock <= 10).length;
+        const outOfStockProducts = allProducts.filter(p => p.stock === 0).length;
         
         content.innerHTML = `
             <div class="admin-overview">
@@ -290,13 +295,12 @@ const Admin = {
                     ${companies.length === 0 
                         ? '<p style="padding: 2rem; text-align: center; color: #666;">No companies yet. Add your first company!</p>' 
                         : companies.map(company => {
-                            const companyProducts = StorageManager.getProducts(company.id);
                             return `<div class="company-item-admin">
                                 <div class="company-item-header">
                                     <img src="${company.logo}" alt="${company.name}" class="company-item-logo" onerror="this.src='https://placehold.co/100x100/000/fff?text=${company.name.charAt(0)}'">
                                     <div class="company-item-info">
                                         <h3>${company.name}</h3>
-                                        <p>${companyProducts.length} Products</p>
+                                        <p>${company.products.length} Products</p>
                                     </div>
                                     <div class="company-item-actions">
                                         <button class="btn-icon" onclick="Admin.showEditCompanyModal(${company.id})" title="Edit Company">
@@ -443,18 +447,18 @@ const Admin = {
                                 </tr>
                             ` : orders.map(order => `
                                 <tr>
-                                    <td><code class="order-id-code">${order.orderId}</code></td>
+                                    <td><code class="order-id-code">${order.id}</code></td>
                                     <td>
                                         <div class="customer-cell">
-                                            <strong>${order.customer.name}</strong>
-                                            <small>${order.customer.phone}</small>
+                                            <strong>${order.customer?.name || 'N/A'}</strong>
+                                            <small>${order.customer?.phone || ''}</small>
                                         </div>
                                     </td>
-                                    <td>${order.items.length} items</td>
-                                    <td><strong>NPR ${parseFloat(order.total_amount).toLocaleString()}</strong></td>
-                                    <td>${new Date(order.created_at).toLocaleDateString()}</td>
+                                    <td>${order.items?.length || 0} items</td>
+                                    <td><strong>NPR ${parseFloat(order.total || 0).toLocaleString()}</strong></td>
+                                    <td>${new Date(order.createdAt).toLocaleDateString()}</td>
                                     <td>
-                                        <button class="btn-icon-small" onclick="Admin.viewOrderDetails('${order.order_id}')" title="View Details">
+                                        <button class="btn-icon-small" onclick="Admin.viewOrderDetails('${order.id}')" title="View Details">
                                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                                 <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
                                                 <circle cx="12" cy="12" r="3"/>
@@ -510,7 +514,7 @@ const Admin = {
             gram: document.getElementById('editGram').value.trim(),
             stock: parseInt(document.getElementById('editStock').value),
             image: this.productImageBase64 || document.getElementById('editImage').value.trim(),
-            company_id: companyId
+            companyId: companyId
         };
 
         if (!product.name || !product.price || !product.gram || isNaN(product.stock)) {
@@ -857,7 +861,7 @@ const Admin = {
     // View Order Details
     viewOrderDetails(orderId) {
         const orders = StorageManager.getOrders();
-        const order = orders.find(o => o.orderId === orderId);
+        const order = orders.find(o => o.id == orderId);
 
         if (!order) return;
 
@@ -867,23 +871,23 @@ const Admin = {
                 <div class="order-info-grid">
                     <div class="info-row">
                         <span class="info-label">Order ID:</span>
-                        <span class="info-value"><code>${order.orderId}</code></span>
+                        <span class="info-value"><code>${order.id}</code></span>
                     </div>
                     <div class="info-row">
                         <span class="info-label">Customer:</span>
-                        <span class="info-value">${order.customer.name}</span>
+                        <span class="info-value">${order.customer?.name || 'N/A'}</span>
                     </div>
                     <div class="info-row">
                         <span class="info-label">Phone:</span>
-                        <span class="info-value">${order.customer.phone}</span>
+                        <span class="info-value">${order.customer?.phone || ''}</span>
                     </div>
                     <div class="info-row">
                         <span class="info-label">Location:</span>
-                        <span class="info-value">${order.customer_location}</span>
+                        <span class="info-value">${order.customer?.location || ''}</span>
                     </div>
                     <div class="info-row">
                         <span class="info-label">Date:</span>
-                        <span class="info-value">${new Date(order.created_at).toLocaleString()}</span>
+                        <span class="info-value">${new Date(order.createdAt).toLocaleString()}</span>
                     </div>
                 </div>
 
@@ -892,25 +896,23 @@ const Admin = {
                     <thead>
                         <tr>
                             <th>Product</th>
-                            <th>Company</th>
                             <th>Weight</th>
                             <th>Price</th>
                         </tr>
                     </thead>
                     <tbody>
-                        ${items.map(item => `
+                        ${(order.items || []).map(item => `
                             <tr>
-                                <td>${item.product_name}</td>
-                                <td>${item.company_name}</td>
-                                <td>${item.weight}</td>
-                                <td>NPR ${parseFloat(item.price).toLocaleString()}</td>
+                                <td>${item.name || item.product_name || 'N/A'}</td>
+                                <td>${item.gram || item.weight || ''}</td>
+                                <td>NPR ${parseFloat(item.price || 0).toLocaleString()}</td>
                             </tr>
                         `).join('')}
                     </tbody>
                     <tfoot>
                         <tr>
-                            <td colspan="3"><strong>Total</strong></td>
-                            <td><strong>NPR ${parseFloat(order.total_amount).toLocaleString()}</strong></td>
+                            <td colspan="2"><strong>Total</strong></td>
+                            <td><strong>NPR ${parseFloat(order.total || 0).toLocaleString()}</strong></td>
                         </tr>
                     </tfoot>
                 </table>

@@ -236,7 +236,40 @@ app.post('/api/login', (req, res) => {
     res.json({ success: true, customer: { customerId: customer.customer_id, name: customer.full_name, email: customer.email, phone: customer.phone, location: customer.location, pan: customer.pan_number } });
 });
 
+app.get('/api/stats', (req, res) => {
+    const db = readDB();
+    const companies = db.companies.filter(c => c.is_active);
+    const products = db.products.filter(p => p.is_active);
+    const orders = db.orders;
+    
+    const revenue = orders.reduce((sum, o) => sum + (parseFloat(o.total_amount) || 0), 0);
+    
+    res.json({
+        companies: companies.length,
+        products: products.length,
+        orders: orders.length,
+        revenue: revenue
+    });
+});
+
 // Orders
+app.get('/api/orders', (req, res) => {
+    const db = readDB();
+    const orders = db.orders.map(order => ({
+        orderId: order.order_id,
+        customer: {
+            name: order.customer_name,
+            phone: order.customer_phone
+        },
+        items: db.order_items.filter(item => item.order_id === order.order_id),
+        total_amount: order.total_amount,
+        created_at: order.created_at,
+        customer_location: order.customer_location
+    }));
+    res.json(orders);
+});
+
+// Create order
 app.post('/api/orders', (req, res) => {
     const db = readDB();
     const { customerId, customer, items, total } = req.body;
@@ -270,11 +303,6 @@ app.post('/api/orders', (req, res) => {
     
     writeDB(db);
     res.json({ success: true, orderId });
-});
-
-app.get('/api/orders', (req, res) => {
-    const db = readDB();
-    res.json(db.orders);
 });
 
 app.post('/api/print-order', (req, res) => {

@@ -9,7 +9,6 @@ const StorageManager = {
     initialized: false,
 
     async init() {
-        // Load initial data from API
         await this.refreshData();
         this.initialized = true;
     },
@@ -32,12 +31,11 @@ const StorageManager = {
     // ==================== COMPANIES ====================
     async getCompanies() {
         if (!this.cache.companies) await this.refreshData();
+        const products = this.cache.products || [];
+        
         return this.cache.companies.map(c => ({
-            id: c.id,
-            name: c.name,
-            logo: c.logo,
-            bgColor: c.bgColor,
-            isActive: c.isActive
+            ...c,
+            products: products.filter(p => p.companyId === c.id && p.isActive !== false)
         }));
     },
 
@@ -117,13 +115,7 @@ const StorageManager = {
 
     // ==================== COMPANIES WITH PRODUCTS ====================
     async getCompaniesWithProducts() {
-        const companies = await this.getCompanies();
-        const products = await this.getProducts();
-        
-        return companies.map(company => ({
-            ...company,
-            products: products.filter(p => p.companyId === company.id)
-        }));
+        return this.getCompanies();
     },
 
     // ==================== ORDERS ====================
@@ -173,7 +165,6 @@ const StorageManager = {
     },
 
     registerCustomer(data) {
-        // Simple local registration
         const id = 'CUST-' + Date.now();
         sessionStorage.setItem('current_user_id', id);
         sessionStorage.setItem('current_user', JSON.stringify({ customerId: id, ...data }));
@@ -181,7 +172,6 @@ const StorageManager = {
     },
 
     loginCustomer(email, password) {
-        // Demo login - accepts any email/password
         const id = 'CUST-' + Date.now();
         sessionStorage.setItem('current_user_id', id);
         sessionStorage.setItem('current_user', JSON.stringify({ customerId: id, name: email.split('@')[0], email }));
