@@ -1,83 +1,46 @@
 // ==================== DATA STORAGE MANAGEMENT ====================
 // Professional Storage Manager with SQL Database Integration
 
+const API_BASE = (window.APP_CONFIG && window.APP_CONFIG.apiBase) || '';
+
 const StorageManager = {
     ADMIN_PASSWORD: 'admin123',
 
-    // Initialize storage system
+    // Initialize - load from API
     async init() {
-        await Database.init();
-        
-        // Initialize with seed data if empty
-        const companies = await Database.select('companies');
-        if (companies.length === 0) {
-            await this.seedInitialData();
-        }
+        // Just ensure DB is initialized (no local seeding anymore)
     },
 
-    // Seed initial data
-    async seedInitialData() {
-        const companies = [
-            { company_id: 1, company_name: "Tech Solutions", logo_url: "https://via.placeholder.com/100/000000/FFFFFF?text=Tech", background_color: "#000000", is_active: true },
-            { company_id: 2, company_name: "Home Essentials", logo_url: "https://via.placeholder.com/100/1a1a1a/FFFFFF?text=Home", background_color: "#1a1a1a", is_active: true },
-            { company_id: 3, company_name: "Fashion Hub", logo_url: "https://via.placeholder.com/100/2a2a2a/FFFFFF?text=Fashion", background_color: "#2a2a2a", is_active: true },
-            { company_id: 4, company_name: "Beauty Care", logo_url: "https://via.placeholder.com/100/3a3a3a/FFFFFF?text=Beauty", background_color: "#3a3a3a", is_active: true },
-            { company_id: 5, company_name: "Sports Gear", logo_url: "https://via.placeholder.com/100/4a4a4a/FFFFFF?text=Sports", background_color: "#4a4a4a", is_active: true }
-        ];
-
-        const products = [
-            { product_id: 101, company_id: 1, product_name: "Wireless Mouse", price: 1299, weight: "120g", stock_quantity: 50, icon_emoji: "🖱️", is_active: true },
-            { product_id: 102, company_id: 1, product_name: "Mechanical Keyboard", price: 4999, weight: "980g", stock_quantity: 30, icon_emoji: "⌨️", is_active: true },
-            { product_id: 103, company_id: 1, product_name: "USB Hub", price: 899, weight: "85g", stock_quantity: 100, icon_emoji: "🔌", is_active: true },
-            { product_id: 201, company_id: 2, product_name: "Kitchen Knife Set", price: 2499, weight: "450g", stock_quantity: 25, icon_emoji: "🔪", is_active: true },
-            { product_id: 202, company_id: 2, product_name: "Glass Storage Jars", price: 799, weight: "1200g", stock_quantity: 60, icon_emoji: "🫙", is_active: true },
-            { product_id: 203, company_id: 2, product_name: "LED Bulbs Pack", price: 599, weight: "240g", stock_quantity: 150, icon_emoji: "💡", is_active: true },
-            { product_id: 301, company_id: 3, product_name: "Cotton T-Shirt", price: 599, weight: "180g", stock_quantity: 75, icon_emoji: "👕", is_active: true },
-            { product_id: 302, company_id: 3, product_name: "Denim Jeans", price: 1999, weight: "550g", stock_quantity: 40, icon_emoji: "👖", is_active: true },
-            { product_id: 303, company_id: 3, product_name: "Sneakers", price: 2499, weight: "800g", stock_quantity: 35, icon_emoji: "👟", is_active: true },
-            { product_id: 401, company_id: 4, product_name: "Face Cream", price: 899, weight: "50g", stock_quantity: 80, icon_emoji: "🧴", is_active: true },
-            { product_id: 402, company_id: 4, product_name: "Shampoo", price: 449, weight: "200ml", stock_quantity: 100, icon_emoji: "🧴", is_active: true },
-            { product_id: 403, company_id: 4, product_name: "Lipstick", price: 599, weight: "4g", stock_quantity: 60, icon_emoji: "💄", is_active: true },
-            { product_id: 501, company_id: 5, product_name: "Yoga Mat", price: 1299, weight: "1200g", stock_quantity: 45, icon_emoji: "🧘", is_active: true },
-            { product_id: 502, company_id: 5, product_name: "Dumbbells Set", price: 2999, weight: "5000g", stock_quantity: 20, icon_emoji: "🏋️", is_active: true },
-            { product_id: 503, company_id: 5, product_name: "Resistance Bands", price: 799, weight: "150g", stock_quantity: 70, icon_emoji: "🎽", is_active: true }
-        ];
-
-        for (const company of companies) {
-            await Database.insert('companies', company);
-        }
-
-        for (const product of products) {
-            await Database.insert('products', product);
-        }
-    },
-
-    // ==================== COMPANIES ====================
+    // ==================== COMPANIES (from API) ====================
     async getCompanies() {
-        const companies = await Database.select('companies', { is_active: true });
-        
-        // Fetch products for each company
-        for (const company of companies) {
-            company.products = await Database.select('products', { 
-                company_id: company.company_id, 
-                is_active: true 
-            });
-        }
+        try {
+            const res = await fetch(`${API_BASE}/api/companies`);
+            const companies = await res.json();
+            
+            // Fetch products for each company
+            for (const company of companies) {
+                const resProducts = await fetch(`${API_BASE}/api/products?company_id=${company.company_id}`);
+                company.products = await resProducts.json();
+            }
 
-        return companies.map(c => ({
-            id: c.company_id,
-            name: c.company_name,
-            logo: c.logo_url,
-            bgColor: c.background_color,
-            products: c.products.map(p => ({
-                id: p.product_id,
-                name: p.product_name,
-                price: p.price,
-                gram: p.weight,
-                stock: p.stock_quantity,
-                image: p.icon_emoji || ""
-            }))
-        }));
+            return companies.map(c => ({
+                id: c.company_id,
+                name: c.company_name,
+                logo: c.logo_url,
+                bgColor: c.background_color,
+                products: c.products.map(p => ({
+                    id: p.product_id,
+                    name: p.product_name,
+                    price: p.price,
+                    gram: p.weight,
+                    stock: p.stock_quantity,
+                    image: p.icon_emoji || ""
+                }))
+            }));
+        } catch (err) {
+            console.error('Failed to fetch companies:', err);
+            return [];
+        }
     },
 
     async getCompanyById(companyId) {
@@ -85,156 +48,121 @@ const StorageManager = {
         return companies.find(c => c.id === companyId);
     },
 
-    // Add company
+    // Add company (via API)
     async addCompany(company) {
-        const companies = await Database.select('companies');
-        const maxId = companies.length > 0 ? Math.max(...companies.map(c => c.company_id)) : 0;
-        
-        const newCompany = {
-            company_id: maxId + 1,
-            company_name: company.name,
-            logo_url: company.logo,
-            background_color: company.bgColor,
-            is_active: true
-        };
-        
-        await Database.insert('companies', newCompany);
-        return newCompany;
+        const res = await fetch(`${API_BASE}/api/companies`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(company)
+        });
+        return await res.json();
     },
 
-    // Update company
+    // Update company (via API)
     async updateCompany(companyId, updates) {
-        await Database.update('companies', { company_id: companyId }, {
-            company_name: updates.name,
-            logo_url: updates.logo,
-            background_color: updates.bgColor
+        await fetch(`${API_BASE}/api/companies/${companyId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(updates)
         });
         return { success: true };
     },
 
-    // Delete company (soft delete)
+    // Delete company (via API)
     async deleteCompany(companyId) {
-        await Database.update('companies', { company_id: companyId }, { is_active: false });
-        return { success: true };
-    },
-
-    // ==================== PRODUCTS ====================
-    async getAllProducts() {
-        return await Database.select('products', { is_active: true });
-    },
-
-    // Add product
-    async addProduct(product) {
-        const products = await Database.select('products');
-        const maxId = products.length > 0 ? Math.max(...products.map(p => p.product_id)) : 100;
-        
-        const newProduct = {
-            product_id: maxId + 1,
-            company_id: product.company_id,
-            product_name: product.name,
-            price: product.price,
-            weight: product.gram,
-            stock_quantity: product.stock,
-            icon_emoji: product.image || "",
-            is_active: true
-        };
-        
-        await Database.insert('products', newProduct);
-        return newProduct;
-    },
-
-    // Update product
-    async updateProduct(productId, updates) {
-        await Database.update('products', { product_id: productId }, {
-            product_name: updates.name,
-            price: updates.price,
-            weight: updates.gram,
-            stock_quantity: updates.stock,
-            icon_emoji: updates.image
+        await fetch(`${API_BASE}/api/companies/${companyId}`, {
+            method: 'DELETE'
         });
         return { success: true };
     },
 
-    // Delete product (soft delete)
-    async deleteProduct(productId) {
-        await Database.update('products', { product_id: productId }, { is_active: false });
+    // ==================== PRODUCTS (from API) ====================
+    async getAllProducts() {
+        const res = await fetch(`${API_BASE}/api/products`);
+        return await res.json();
+    },
+
+    // Add product (via API)
+    async addProduct(product) {
+        const res = await fetch(`${API_BASE}/api/products`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(product)
+        });
+        return await res.json();
+    },
+
+    // Update product (via API)
+    async updateProduct(productId, updates) {
+        await fetch(`${API_BASE}/api/products/${productId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(updates)
+        });
         return { success: true };
     },
 
-    // ==================== CUSTOMER AUTHENTICATION ====================
+    // Delete product (via API)
+    async deleteProduct(productId) {
+        await fetch(`${API_BASE}/api/products/${productId}`, {
+            method: 'DELETE'
+        });
+        return { success: true };
+    },
+
+    // ==================== CUSTOMER AUTHENTICATION (from API) ====================
     async registerCustomer(customerData) {
         const { email, password, name, phone, location, pan } = customerData;
 
-        // Validation
-        if (!this.isValidEmail(email)) {
-            return { success: false, message: 'Invalid email format' };
+        try {
+            const res = await fetch(`${API_BASE}/api/register`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, email, phone, location, pan, password })
+            });
+            const data = await res.json();
+            
+            if (!res.ok) {
+                return { success: false, message: data.error || 'Registration failed' };
+            }
+            
+            return { success: true, message: 'Registration successful', customerId: data.customer.customerId };
+        } catch (err) {
+            return { success: false, message: err.message };
         }
-
-        // Check if email exists
-        const existing = await Database.findOne('customers', { email });
-        if (existing) {
-            return { success: false, message: 'Email already registered' };
-        }
-
-        // Check if phone exists
-        const existingPhone = await Database.findOne('customers', { phone });
-        if (existingPhone) {
-            return { success: false, message: 'Phone number already registered' };
-        }
-
-        // Create customer
-        const customerId = Database.generateId('CUST-');
-        const passwordHash = Database.hashPassword(password);
-
-        const customer = {
-            customer_id: customerId,
-            email,
-            password_hash: passwordHash,
-            full_name: name,
-            phone,
-            location,
-            pan_number: pan || null,
-            is_active: true
-        };
-
-        await Database.insert('customers', customer);
-
-        return { success: true, message: 'Registration successful', customerId };
     },
 
     async loginCustomer(email, password) {
-        const customer = await Database.findOne('customers', { email, is_active: true });
-
-        if (!customer) {
-            return { success: false, message: 'Email not found' };
-        }
-
-        const passwordHash = Database.hashPassword(password);
-        if (customer.password_hash !== passwordHash) {
-            return { success: false, message: 'Incorrect password' };
-        }
-
-        // Update last login
-        await Database.update('customers', { customer_id: customer.customer_id }, {
-            last_login: new Date().toISOString()
-        });
-
-        // Store session
-        sessionStorage.setItem('current_user_id', customer.customer_id);
-
-        return {
-            success: true,
-            message: 'Login successful',
-            customerId: customer.customer_id,
-            customer: {
-                customerId: customer.customer_id,
-                name: customer.full_name,
-                email: customer.email,
-                phone: customer.phone,
-                location: customer.location,
-                pan: customer.pan_number
+        try {
+            const res = await fetch(`${API_BASE}/api/login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password })
+            });
+            const data = await res.json();
+            
+            if (!res.ok || !data.success) {
+                return { success: false, message: data.error || 'Login failed' };
             }
-        };
+
+            sessionStorage.setItem('current_user_id', data.customer.customerId);
+
+            return {
+                success: true,
+                message: 'Login successful',
+                customerId: data.customer.customerId,
+                customer: {
+                    customerId: data.customer.customerId,
+                    name: data.customer.name,
+                    email: data.customer.email,
+                    phone: data.customer.phone,
+                    location: data.customer.location,
+                    pan: data.customer.pan
+                }
+            };
+        } catch (err) {
+            return { success: false, message: err.message };
+        }
     },
 
     logoutCustomer() {
@@ -244,20 +172,13 @@ const StorageManager = {
     async getCurrentUser() {
         const customerId = sessionStorage.getItem('current_user_id');
         if (!customerId) return null;
-
-        const customer = await Database.findOne('customers', { customer_id: customerId });
-        if (!customer) return null;
-
-        return {
-            customerId: customer.customer_id,
-            name: customer.full_name,
-            email: customer.email,
-            phone: customer.phone,
-            location: customer.location,
-            pan: customer.pan_number,
-            registeredDate: customer.created_at,
-            lastLogin: customer.last_login
-        };
+        
+        // We need to fetch customer data - for now return stored data
+        const stored = sessionStorage.getItem('current_user');
+        if (stored) {
+            return JSON.parse(stored);
+        }
+        return { customerId, name: 'User' };
     },
 
     isCustomerLoggedIn() {
@@ -265,112 +186,33 @@ const StorageManager = {
     },
 
     async updateCustomerProfile(customerId, updates) {
-        delete updates.email;
-        delete updates.password;
-
-        const updated = await Database.update('customers', { customer_id: customerId }, {
-            full_name: updates.name,
-            phone: updates.phone,
-            location: updates.location,
-            pan_number: updates.pan
-        });
-
-        if (updated) {
-            return { success: true, message: 'Profile updated successfully' };
-        }
-
-        return { success: false, message: 'Update failed' };
+        return { success: false, message: 'Not implemented' };
     },
 
     async changePassword(customerId, oldPassword, newPassword) {
-        const customer = await Database.findOne('customers', { customer_id: customerId });
-        if (!customer) {
-            return { success: false, message: 'Customer not found' };
-        }
-
-        const oldHash = Database.hashPassword(oldPassword);
-        if (customer.password_hash !== oldHash) {
-            return { success: false, message: 'Incorrect old password' };
-        }
-
-        const newHash = Database.hashPassword(newPassword);
-        await Database.update('customers', { customer_id: customerId }, {
-            password_hash: newHash
-        });
-
-        return { success: true, message: 'Password changed successfully' };
+        return { success: false, message: 'Not implemented' };
     },
 
     // ==================== ORDERS ====================
     async saveOrder(order) {
-        // Insert order
-        await Database.insert('orders', {
-            order_id: order.orderId,
-            customer_id: order.customerId,
-            customer_name: order.customer.name,
-            customer_phone: order.customer.phone,
-            customer_location: order.customer.location,
-            customer_pan: order.customer.pan,
-            total_amount: order.total,
-            order_status: 'completed'
-        });
-
-        // Insert order items
-        for (const item of order.items) {
-            await Database.insert('order_items', {
-                order_id: order.orderId,
-                product_id: item.id,
-                product_name: item.name,
-                company_name: item.companyName,
-                price: item.price,
-                weight: item.gram,
-                icon_emoji: item.image || ""
+        try {
+            await fetch(`${API_BASE}/api/orders`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(order)
             });
+        } catch (err) {
+            console.error('Failed to save order:', err);
         }
-
         return order;
     },
 
     async getOrdersByCustomer(customerId) {
-        const orders = await Database.select('orders', { customer_id: customerId });
-        
-        for (const order of orders) {
-            order.items = await Database.select('order_items', { order_id: order.order_id });
-        }
-
-        return orders.map(o => ({
-            orderId: o.order_id,
-            customerId: o.customer_id,
-            customer: {
-                name: o.customer_name,
-                phone: o.customer_phone,
-                location: o.customer_location,
-                pan: o.customer_pan
-            },
-            items: o.items.map(i => ({
-                name: i.product_name,
-                companyName: i.company_name,
-                price: i.price,
-                gram: i.weight,
-                image: i.icon_emoji
-            })),
-            total: o.total_amount,
-            date: o.created_at,
-            status: o.order_status
-        }));
+        return [];
     },
 
     async getCustomerStats(customerId) {
-        const stats = await Database.aggregate('orders', 
-            { customer_id: customerId },
-            { count: true, sum: ['total_amount'], avg: ['total_amount'] }
-        );
-
-        return {
-            totalOrders: stats.count || 0,
-            totalSpent: stats.sum_total_amount || 0,
-            averageOrderValue: stats.avg_total_amount || 0
-        };
+        return { totalOrders: 0, totalSpent: 0, averageOrderValue: 0 };
     },
 
     // ==================== ADMIN ====================

@@ -72,6 +72,9 @@ const CustomerAuth = {
                 return;
             }
 
+            // Store user
+            sessionStorage.setItem('current_user', JSON.stringify(result.customer));
+
             this.currentUser = result.customer;
             showNotification(`Welcome back, ${result.customer.name}!`, 'success');
             this.closeAuthModal();
