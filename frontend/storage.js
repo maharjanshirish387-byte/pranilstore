@@ -26,21 +26,21 @@ const StorageManager = {
         ];
 
         const products = [
-            { product_id: 101, company_id: 1, product_name: "Wireless Mouse", price: 1299, weight: "120g", stock_quantity: 50, is_active: true },
-            { product_id: 102, company_id: 1, product_name: "Mechanical Keyboard", price: 4999, weight: "980g", stock_quantity: 30, is_active: true },
-            { product_id: 103, company_id: 1, product_name: "USB Hub", price: 899, weight: "85g", stock_quantity: 100, is_active: true },
-            { product_id: 201, company_id: 2, product_name: "Kitchen Knife Set", price: 2499, weight: "450g", stock_quantity: 25, is_active: true },
-            { product_id: 202, company_id: 2, product_name: "Glass Storage Jars", price: 799, weight: "1200g", stock_quantity: 60, is_active: true },
-            { product_id: 203, company_id: 2, product_name: "LED Bulbs Pack", price: 599, weight: "240g", stock_quantity: 150, is_active: true },
-            { product_id: 301, company_id: 3, product_name: "Cotton T-Shirt", price: 599, weight: "180g", stock_quantity: 75, is_active: true },
-            { product_id: 302, company_id: 3, product_name: "Denim Jeans", price: 1999, weight: "550g", stock_quantity: 40, is_active: true },
-            { product_id: 303, company_id: 3, product_name: "Sneakers", price: 2499, weight: "800g", stock_quantity: 35, is_active: true },
-            { product_id: 401, company_id: 4, product_name: "Face Cream", price: 899, weight: "50g", stock_quantity: 80, is_active: true },
-            { product_id: 402, company_id: 4, product_name: "Shampoo", price: 449, weight: "200ml", stock_quantity: 100, is_active: true },
-            { product_id: 403, company_id: 4, product_name: "Lipstick", price: 599, weight: "4g", stock_quantity: 60, is_active: true },
-            { product_id: 501, company_id: 5, product_name: "Yoga Mat", price: 1299, weight: "1200g", stock_quantity: 45, is_active: true },
-            { product_id: 502, company_id: 5, product_name: "Dumbbells Set", price: 2999, weight: "5000g", stock_quantity: 20, is_active: true },
-            { product_id: 503, company_id: 5, product_name: "Resistance Bands", price: 799, weight: "150g", stock_quantity: 70, is_active: true }
+            { product_id: 101, company_id: 1, product_name: "Wireless Mouse", price: 1299, weight: "120g", stock_quantity: 50, icon_emoji: "🖱️", is_active: true },
+            { product_id: 102, company_id: 1, product_name: "Mechanical Keyboard", price: 4999, weight: "980g", stock_quantity: 30, icon_emoji: "⌨️", is_active: true },
+            { product_id: 103, company_id: 1, product_name: "USB Hub", price: 899, weight: "85g", stock_quantity: 100, icon_emoji: "🔌", is_active: true },
+            { product_id: 201, company_id: 2, product_name: "Kitchen Knife Set", price: 2499, weight: "450g", stock_quantity: 25, icon_emoji: "🔪", is_active: true },
+            { product_id: 202, company_id: 2, product_name: "Glass Storage Jars", price: 799, weight: "1200g", stock_quantity: 60, icon_emoji: "🫙", is_active: true },
+            { product_id: 203, company_id: 2, product_name: "LED Bulbs Pack", price: 599, weight: "240g", stock_quantity: 150, icon_emoji: "💡", is_active: true },
+            { product_id: 301, company_id: 3, product_name: "Cotton T-Shirt", price: 599, weight: "180g", stock_quantity: 75, icon_emoji: "👕", is_active: true },
+            { product_id: 302, company_id: 3, product_name: "Denim Jeans", price: 1999, weight: "550g", stock_quantity: 40, icon_emoji: "👖", is_active: true },
+            { product_id: 303, company_id: 3, product_name: "Sneakers", price: 2499, weight: "800g", stock_quantity: 35, icon_emoji: "👟", is_active: true },
+            { product_id: 401, company_id: 4, product_name: "Face Cream", price: 899, weight: "50g", stock_quantity: 80, icon_emoji: "🧴", is_active: true },
+            { product_id: 402, company_id: 4, product_name: "Shampoo", price: 449, weight: "200ml", stock_quantity: 100, icon_emoji: "🧴", is_active: true },
+            { product_id: 403, company_id: 4, product_name: "Lipstick", price: 599, weight: "4g", stock_quantity: 60, icon_emoji: "💄", is_active: true },
+            { product_id: 501, company_id: 5, product_name: "Yoga Mat", price: 1299, weight: "1200g", stock_quantity: 45, icon_emoji: "🧘", is_active: true },
+            { product_id: 502, company_id: 5, product_name: "Dumbbells Set", price: 2999, weight: "5000g", stock_quantity: 20, icon_emoji: "🏋️", is_active: true },
+            { product_id: 503, company_id: 5, product_name: "Resistance Bands", price: 799, weight: "150g", stock_quantity: 70, icon_emoji: "🎽", is_active: true }
         ];
 
         for (const company of companies) {

@@ -136,7 +136,7 @@ const Cart = {
             status: 'completed'
         };
 
-        StorageManager.saveOrder(order);
+        await StorageManager.saveOrder(order);
 
         // Generate receipt text
         const receipt = this.generateReceipt(order);
