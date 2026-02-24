@@ -1,13 +1,1 @@
-{
-  "outputDirectory": "frontend",
-  "buildCommand": "npm run build",
-  "installCommand": "npm install",
-  "framework": null,
-  "functions": {
-    "api/index.js": {
-      "runtime": "nodejs18.x",
-      "memory": 1024,
-      "maxDuration": 10
-    }
-  }
-}
+{\n  "buildCommand": "npm install && npm run build",\n  "installCommand": "npm install --legacy-peer-deps",\n  "framework": null,\n  "functions": {\n    "api/**/*.js": {\n      "runtime": "nodejs18.x",\n      "memory": 1024,\n      "maxDuration": 30\n    },\n    "backend/**/*.js": {\n      "runtime": "nodejs18.x",\n      "memory": 2048,\n      "maxDuration": 60\n    }\n  },\n  "builds": [\n    {\n      "src": "frontend/package.json",\n      "use": "@vercel/static-build",\n      "config": {\n        "distDir": "dist"\n      }\n    }\n  ],\n  "routes": [\n    {\n      "src": "/api/(.*)",\n      "dest": "/api/$1"\n    },\n    {\n      "src": "/(.*)",\n      "dest": "/index.html",\n      "status": 200\n    }\n  ]\n}
