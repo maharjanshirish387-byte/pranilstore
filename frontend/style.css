@@ -1650,6 +1650,56 @@ body {
     font-size: 0.875rem;
 }
 
+.empty-state p {
+    margin-bottom: 1rem;
+}
+
+/* SEARCH RESULTS */
+.search-results-header {
+    width: 100%;
+    grid-column: 1 / -1;
+    padding: 1.5rem;
+    background: var(--color-gray-100);
+    border-radius: var(--radius-lg);
+    margin-bottom: 1rem;
+}
+
+.search-results-header h2 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+}
+
+.search-results-header p {
+    color: var(--color-gray-500);
+    font-size: 0.875rem;
+}
+
+.search-result-card {
+    cursor: pointer;
+    transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.search-result-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
+}
+
+.product-company {
+    font-size: 0.75rem;
+    color: var(--color-gray-500);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.25rem;
+}
+
+.product-emoji {
+    font-size: 3rem;
+    display: block;
+    text-align: center;
+    line-height: 1.2;
+}
+
 /* ADMIN PANEL */
 .admin-panel {
     position: fixed;
