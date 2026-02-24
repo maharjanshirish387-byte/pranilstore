@@ -76,7 +76,7 @@ const Cart = {
     },
 
     // Toggle cart sidebar
-    toggleCart() {
+    async toggleCart() {
         const sidebar = document.getElementById('checkoutSidebar');
         if (sidebar.style.display === 'flex') {
             sidebar.style.display = 'none';
@@ -85,7 +85,7 @@ const Cart = {
 
             // Auto-fill if logged in
             if (StorageManager.isCustomerLoggedIn()) {
-                const customer = StorageManager.getCurrentUser();
+                const customer = await StorageManager.getCurrentUser();
                 if (customer) {
                     document.getElementById('customerName').value = customer.name;
                     document.getElementById('customerPhone').value = customer.phone;
@@ -117,7 +117,7 @@ const Cart = {
         checkoutBtn.disabled = true;
         checkoutBtn.textContent = 'Processing...';
 
-        const currentUser = StorageManager.getCurrentUser();
+        const currentUser = await StorageManager.getCurrentUser();
         const customerId = currentUser ? currentUser.customerId : null;
 
         const order = {

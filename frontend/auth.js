@@ -48,7 +48,7 @@ const CustomerAuth = {
         document.getElementById('registerConfirmPassword').value = '';
     },
 
-    // Handle login (server-backed)
+    // Handle login 
     async login() {
         const email = document.getElementById('loginEmail').value.trim();
         const password = document.getElementById('loginPassword').value;
@@ -63,30 +63,19 @@ const CustomerAuth = {
         submitBtn.textContent = 'Signing in...';
 
         try {
-            const apiBase = (window.APP_CONFIG && window.APP_CONFIG.apiBase) || '';
-            const resp = await fetch(`${apiBase}/api/login`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, password })
-            });
-
-            const data = await resp.json();
-            if (!resp.ok) {
-                showNotification(data.error || 'Login failed', 'error');
+            const result = await StorageManager.loginCustomer(email, password);
+            
+            if (!result.success) {
+                showNotification(result.message, 'error');
                 submitBtn.disabled = false;
                 submitBtn.textContent = 'Sign In';
                 return;
             }
 
-            // store token + user
-            sessionStorage.setItem('auth_token', data.token);
-            sessionStorage.setItem('current_user_id', data.customer.customerId);
-            sessionStorage.setItem('current_user', JSON.stringify(data.customer));
-
-            this.currentUser = data.customer;
-            showNotification(`Welcome back, ${data.customer.name}!`, 'success');
+            this.currentUser = result.customer;
+            showNotification(`Welcome back, ${result.customer.name}!`, 'success');
             this.closeAuthModal();
-            this.updateUIForLoggedInUser(data.customer);
+            this.updateUIForLoggedInUser(result.customer);
         } catch (e) {
             showNotification('Login failed: ' + e.message, 'error');
         } finally {
@@ -126,29 +115,23 @@ const CustomerAuth = {
         submitBtn.textContent = 'Creating account...';
 
         try {
-            const apiBase = (window.APP_CONFIG && window.APP_CONFIG.apiBase) || '';
-            const resp = await fetch(`${apiBase}/api/register`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, email, phone, location, pan, password })
-            });
-
-            const data = await resp.json();
-            if (!resp.ok) {
-                showNotification(data.error || 'Registration failed', 'error');
+            const result = await StorageManager.registerCustomer({ name, email, phone, location, pan, password });
+            
+            if (!result.success) {
+                showNotification(result.message, 'error');
                 submitBtn.disabled = false;
                 submitBtn.textContent = 'Create Account';
                 return;
             }
 
-            // store token + user
-            sessionStorage.setItem('auth_token', data.token);
-            sessionStorage.setItem('current_user_id', data.customer.customerId);
-            sessionStorage.setItem('current_user', JSON.stringify(data.customer));
-
-            showNotification('Registration successful! You are now logged in.', 'success');
-            this.updateUIForLoggedInUser(data.customer);
-            this.closeAuthModal();
+            // Auto-login after registration
+            const loginResult = await StorageManager.loginCustomer(email, password);
+            if (loginResult.success) {
+                this.currentUser = loginResult.customer;
+                showNotification('Registration successful! You are now logged in.', 'success');
+                this.updateUIForLoggedInUser(loginResult.customer);
+                this.closeAuthModal();
+            }
         } catch (e) {
             showNotification('Registration failed: ' + e.message, 'error');
         } finally {
@@ -198,15 +181,15 @@ const CustomerAuth = {
     },
 
     // Show dashboard
-    showDashboard() {
-        const customer = StorageManager.getCurrentUser();
+    async showDashboard() {
+        const customer = await StorageManager.getCurrentUser();
         if (!customer) {
             showNotification('Please login first', 'error');
             return;
         }
 
         document.getElementById('customerDashboard').classList.add('active');
-        this.loadDashboardData();
+        await this.loadDashboardData();
     },
 
     // Close dashboard
@@ -215,12 +198,12 @@ const CustomerAuth = {
     },
 
     // Load dashboard data
-    loadDashboardData() {
-        const customer = StorageManager.getCurrentUser();
+    async loadDashboardData() {
+        const customer = await StorageManager.getCurrentUser();
         if (!customer) return;
 
-        const stats = StorageManager.getCustomerStats(customer.customerId);
-        const orders = StorageManager.getOrdersByCustomer(customer.customerId);
+        const stats = await StorageManager.getCustomerStats(customer.customerId);
+        const orders = await StorageManager.getOrdersByCustomer(customer.customerId);
 
         // Fill customer info
         document.getElementById('dashboardCustomerName').textContent = customer.name;
@@ -263,8 +246,8 @@ const CustomerAuth = {
     },
 
     // Show edit profile modal
-    showEditProfile() {
-        const customer = StorageManager.getCurrentUser();
+    async showEditProfile() {
+        const customer = await StorageManager.getCurrentUser();
         if (!customer) return;
 
         document.getElementById('editProfileName').value = customer.name;
@@ -273,6 +256,89 @@ const CustomerAuth = {
         document.getElementById('editProfilePan').value = customer.pan || '';
 
         document.getElementById('editProfileModal').classList.add('active');
+    },
+
+    // Close edit profile
+    closeEditProfile() {
+        document.getElementById('editProfileModal').classList.remove('active');
+    },
+
+    // Save profile
+    async saveProfile() {
+        const customer = await StorageManager.getCurrentUser();
+        if (!customer) return;
+
+        const updates = {
+            name: document.getElementById('editProfileName').value.trim(),
+            phone: document.getElementById('editProfilePhone').value.trim(),
+            location: document.getElementById('editProfileLocation').value.trim(),
+            pan: document.getElementById('editProfilePan').value.trim() || 'N/A'
+        };
+
+        if (!updates.name || !updates.phone || !updates.location) {
+            showNotification('Please fill all required fields', 'error');
+            return;
+        }
+
+        const result = await StorageManager.updateCustomerProfile(customer.customerId, updates);
+
+        if (result.success) {
+            showNotification('Profile updated successfully!', 'success');
+            this.closeEditProfile();
+
+            const updatedCustomer = await StorageManager.getCurrentUser();
+            this.updateUIForLoggedInUser(updatedCustomer);
+            await this.loadDashboardData();
+        } else {
+            showNotification(result.message, 'error');
+        }
+    },
+
+    // Show change password modal
+    showChangePassword() {
+        document.getElementById('changePasswordModal').classList.add('active');
+    },
+
+    // Close change password
+    closeChangePassword() {
+        document.getElementById('changePasswordModal').classList.remove('active');
+        document.getElementById('oldPassword').value = '';
+        document.getElementById('newPassword').value = '';
+        document.getElementById('confirmNewPassword').value = '';
+    },
+
+    // Change password
+    async changePassword() {
+        const customer = await StorageManager.getCurrentUser();
+        if (!customer) return;
+
+        const oldPassword = document.getElementById('oldPassword').value;
+        const newPassword = document.getElementById('newPassword').value;
+        const confirmNewPassword = document.getElementById('confirmNewPassword').value;
+
+        if (!oldPassword || !newPassword || !confirmNewPassword) {
+            showNotification('Please fill all fields', 'error');
+            return;
+        }
+
+        if (newPassword !== confirmNewPassword) {
+            showNotification('New passwords do not match', 'error');
+            return;
+        }
+
+        if (newPassword.length < 6) {
+            showNotification('Password must be at least 6 characters', 'error');
+            return;
+        }
+
+        const result = await StorageManager.changePassword(customer.customerId, oldPassword, newPassword);
+
+        if (result.success) {
+            showNotification('Password changed successfully!', 'success');
+            this.closeChangePassword();
+        } else {
+            showNotification(result.message, 'error');
+        }
     },
 
     // Close edit profile
