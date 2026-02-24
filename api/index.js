@@ -1,285 +1,394 @@
 const express = require('express');
-const serverless = require('serverless-http');
 const cors = require('cors');
-const bodyParser = require('body-parser');
-const fs = require('fs');
-const path = require('path');
+const { Pool } = require('pg');
 
 const app = express();
-
 app.use(cors());
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
+app.use(express.json());
 
-// File-based database
-const DB_FILE = path.join(__dirname, 'database.json');
+// Database connection
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+});
 
-// Initialize database file if it doesn't exist
-function initDB() {
-    if (!fs.existsSync(DB_FILE)) {
-        const initialData = {
-            customers: [],
-            orders: [],
-            order_items: [],
-            companies: [
-                { company_id: 1, company_name: "Tech Solutions", logo_url: "https://via.placeholder.com/100/000000/FFFFFF?text=Tech", background_color: "#000000", is_active: true },
-                { company_id: 2, company_name: "Home Essentials", logo_url: "https://via.placeholder.com/100/1a1a1a/FFFFFF?text=Home", background_color: "#1a1a1a", is_active: true },
-                { company_id: 3, company_name: "Fashion Hub", logo_url: "https://via.placeholder.com/100/2a2a2a/FFFFFF?text=Fashion", background_color: "#2a2a2a", is_active: true },
-                { company_id: 4, company_name: "Beauty Care", logo_url: "https://via.placeholder.com/100/3a3a3a/FFFFFF?text=Beauty", background_color: "#3a3a3a", is_active: true },
-                { company_id: 5, company_name: "Sports Gear", logo_url: "https://via.placeholder.com/100/4a4a4a/FFFFFF?text=Sports", background_color: "#4a4a4a", is_active: true }
-            ],
-            products: [
-                { product_id: 101, company_id: 1, product_name: "Wireless Mouse", price: 1299, weight: "120g", stock_quantity: 50, icon_emoji: "🖱️", is_active: true },
-                { product_id: 102, company_id: 1, product_name: "Mechanical Keyboard", price: 4999, weight: "980g", stock_quantity: 30, icon_emoji: "⌨️", is_active: true },
-                { product_id: 103, company_id: 1, product_name: "USB Hub", price: 899, weight: "85g", stock_quantity: 100, icon_emoji: "🔌", is_active: true },
-                { product_id: 201, company_id: 2, product_name: "Kitchen Knife Set", price: 2499, weight: "450g", stock_quantity: 25, icon_emoji: "🔪", is_active: true },
-                { product_id: 202, company_id: 2, product_name: "Glass Storage Jars", price: 799, weight: "1200g", stock_quantity: 60, icon_emoji: "🫙", is_active: true },
-                { product_id: 203, company_id: 2, product_name: "LED Bulbs Pack", price: 599, weight: "240g", stock_quantity: 150, icon_emoji: "💡", is_active: true },
-                { product_id: 301, company_id: 3, product_name: "Cotton T-Shirt", price: 599, weight: "180g", stock_quantity: 75, icon_emoji: "👕", is_active: true },
-                { product_id: 302, company_id: 3, product_name: "Denim Jeans", price: 1999, weight: "550g", stock_quantity: 40, icon_emoji: "👖", is_active: true },
-                { product_id: 303, company_id: 3, product_name: "Sneakers", price: 2499, weight: "800g", stock_quantity: 35, icon_emoji: "👟", is_active: true },
-                { product_id: 401, company_id: 4, product_name: "Face Cream", price: 899, weight: "50g", stock_quantity: 80, icon_emoji: "🧴", is_active: true },
-                { product_id: 402, company_id: 4, product_name: "Shampoo", price: 449, weight: "200ml", stock_quantity: 100, icon_emoji: "🧴", is_active: true },
-                { product_id: 403, company_id: 4, product_name: "Lipstick", price: 599, weight: "4g", stock_quantity: 60, icon_emoji: "💄", is_active: true },
-                { product_id: 501, company_id: 5, product_name: "Yoga Mat", price: 1299, weight: "1200g", stock_quantity: 45, icon_emoji: "🧘", is_active: true },
-                { product_id: 502, company_id: 5, product_name: "Dumbbells Set", price: 2999, weight: "5000g", stock_quantity: 20, icon_emoji: "🏋️", is_active: true },
-                { product_id: 503, company_id: 5, product_name: "Resistance Bands", price: 799, weight: "150g", stock_quantity: 70, icon_emoji: "🎽", is_active: true }
-            ]
-        };
-        fs.writeFileSync(DB_FILE, JSON.stringify(initialData, null, 2));
+// Helper function for hashing passwords
+function hashPassword(password) {
+  const crypto = require('crypto');
+  return crypto.createHash('sha256').update(password).digest('hex');
+}
+
+// ==================== COMPANIES ====================
+
+app.get('/api/companies', async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT * FROM companies WHERE is_active = true ORDER BY company_id'
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to fetch companies' });
+  }
+});
+
+app.get('/api/companies/:id', async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT * FROM companies WHERE company_id = $1 AND is_active = true',
+      [req.params.id]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Company not found' });
     }
-}
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to fetch company' });
+  }
+});
 
-// Read database
-function readDB() {
-    initDB();
-    return JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
-}
+app.post('/api/companies', async (req, res) => {
+  try {
+    const { company_name, logo_url, background_color, description } = req.body;
+    const result = await pool.query(
+      `INSERT INTO companies (company_name, logo_url, background_color, description) 
+       VALUES ($1, $2, $3, $4) RETURNING *`,
+      [company_name, logo_url, background_color || '#000000', description]
+    );
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to create company' });
+  }
+});
 
-// Write database
-function writeDB(data) {
-    fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2));
-}
+app.patch('/api/companies/:id', async (req, res) => {
+  try {
+    const { company_name, logo_url, background_color, description } = req.body;
+    const fields = [];
+    const values = [];
+    let idx = 1;
 
-// Simple hash function
-function simpleHash(str) {
-    let hash = 0;
-    for (let i = 0; i < str.length; i++) {
-        const char = str.charCodeAt(i);
-        hash = ((hash << 5) - hash) + char;
-        hash = hash & hash;
+    if (company_name) { fields.push(`company_name = $${idx++}`); values.push(company_name); }
+    if (logo_url) { fields.push(`logo_url = $${idx++}`); values.push(logo_url); }
+    if (background_color) { fields.push(`background_color = $${idx++}`); values.push(background_color); }
+    if (description !== undefined) { fields.push(`description = $${idx++}`); values.push(description); }
+
+    if (fields.length === 0) {
+      return res.status(400).json({ error: 'No fields to update' });
     }
-    return hash.toString();
-}
 
-// API routes
-app.get('/api/companies', (req, res) => {
-    const db = readDB();
-    res.json(db.companies.filter(c => c.is_active));
+    values.push(req.params.id);
+    const result = await pool.query(
+      `UPDATE companies SET ${fields.join(', ')}, updated_at = CURRENT_TIMESTAMP 
+       WHERE company_id = $${idx} RETURNING *`,
+      values
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Company not found' });
+    }
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to update company' });
+  }
 });
 
-app.get('/api/companies/:id', (req, res) => {
-    const db = readDB();
-    const company = db.companies.find(c => c.company_id === parseInt(req.params.id) && c.is_active);
-    if (!company) return res.status(404).json({ error: 'Company not found' });
-    res.json(company);
-});
-
-app.post('/api/companies', (req, res) => {
-    const db = readDB();
-    const { company_name, logo_url, background_color } = req.body;
-    if (!company_name) return res.status(400).json({ error: 'company_name required' });
-    
-    const maxId = db.companies.length > 0 ? Math.max(...db.companies.map(c => c.company_id)) : 0;
-    const company = {
-        company_id: maxId + 1,
-        company_name,
-        logo_url: logo_url || '',
-        background_color: background_color || '#000000',
-        is_active: true
-    };
-    db.companies.push(company);
-    writeDB(db);
-    res.status(201).json(company);
-});
-
-app.patch('/api/companies/:id', (req, res) => {
-    const db = readDB();
-    const idx = db.companies.findIndex(c => c.company_id === parseInt(req.params.id));
-    if (idx === -1) return res.status(404).json({ error: 'Company not found' });
-    
-    const { company_name, logo_url, background_color } = req.body;
-    if (company_name) db.companies[idx].company_name = company_name;
-    if (logo_url) db.companies[idx].logo_url = logo_url;
-    if (background_color) db.companies[idx].background_color = background_color;
-    
-    writeDB(db);
-    res.json(db.companies[idx]);
-});
-
-app.delete('/api/companies/:id', (req, res) => {
-    const db = readDB();
-    const idx = db.companies.findIndex(c => c.company_id === parseInt(req.params.id));
-    if (idx === -1) return res.status(404).json({ error: 'Company not found' });
-    db.companies[idx].is_active = false;
-    writeDB(db);
+app.delete('/api/companies/:id', async (req, res) => {
+  try {
+    await pool.query(
+      'UPDATE companies SET is_active = false, updated_at = CURRENT_TIMESTAMP WHERE company_id = $1',
+      [req.params.id]
+    );
     res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to delete company' });
+  }
 });
 
-// Products
-app.get('/api/products', (req, res) => {
-    const db = readDB();
-    let products = db.products.filter(p => p.is_active);
-    if (req.query.company_id) {
-        products = products.filter(p => p.company_id === parseInt(req.query.company_id));
+// ==================== PRODUCTS ====================
+
+app.get('/api/products', async (req, res) => {
+  try {
+    const { company_id } = req.query;
+    let query = 'SELECT p.*, c.company_name FROM products p JOIN companies c ON p.company_id = c.company_id WHERE p.is_active = true';
+    const values = [];
+
+    if (company_id) {
+      values.push(company_id);
+      query += ` AND p.company_id = $${values.length}`;
     }
-    res.json(products);
+
+    query += ' ORDER BY p.product_id';
+    const result = await pool.query(query, values);
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to fetch products' });
+  }
 });
 
-app.get('/api/products/:id', (req, res) => {
-    const db = readDB();
-    const product = db.products.find(p => p.product_id === parseInt(req.params.id) && p.is_active);
-    if (!product) return res.status(404).json({ error: 'Product not found' });
-    res.json(product);
-});
-
-app.post('/api/products', (req, res) => {
-    const db = readDB();
-    const { company_id, product_name, price, weight, stock_quantity, icon_emoji } = req.body;
-    if (!company_id || !product_name || price == null) {
-        return res.status(400).json({ error: 'company_id, product_name, and price are required' });
+app.get('/api/products/:id', async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT p.*, c.company_name FROM products p JOIN companies c ON p.company_id = c.company_id WHERE p.product_id = $1 AND p.is_active = true',
+      [req.params.id]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Product not found' });
     }
-    
-    const maxId = db.products.length > 0 ? Math.max(...db.products.map(p => p.product_id)) : 100;
-    const product = {
-        product_id: maxId + 1,
-        company_id: parseInt(company_id),
-        product_name,
-        price: parseFloat(price),
-        weight: weight || '',
-        stock_quantity: parseInt(stock_quantity) || 0,
-        icon_emoji: icon_emoji || '',
-        is_active: true
-    };
-    db.products.push(product);
-    writeDB(db);
-    res.status(201).json(product);
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to fetch product' });
+  }
 });
 
-app.patch('/api/products/:id', (req, res) => {
-    const db = readDB();
-    const idx = db.products.findIndex(p => p.product_id === parseInt(req.params.id));
-    if (idx === -1) return res.status(404).json({ error: 'Product not found' });
-    
-    const { product_name, price, weight, stock_quantity, icon_emoji } = req.body;
-    if (product_name) db.products[idx].product_name = product_name;
-    if (price != null) db.products[idx].price = parseFloat(price);
-    if (weight) db.products[idx].weight = weight;
-    if (stock_quantity != null) db.products[idx].stock_quantity = parseInt(stock_quantity);
-    if (icon_emoji) db.products[idx].icon_emoji = icon_emoji;
-    
-    writeDB(db);
-    res.json(db.products[idx]);
+app.post('/api/products', async (req, res) => {
+  try {
+    const { company_id, product_name, description, price, weight, stock_quantity, icon_emoji, image_url } = req.body;
+    const result = await pool.query(
+      `INSERT INTO products (company_id, product_name, description, price, weight, stock_quantity, icon_emoji, image_url) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+      [company_id, product_name, description, price, weight, stock_quantity || 0, icon_emoji, image_url]
+    );
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to create product' });
+  }
 });
 
-app.delete('/api/products/:id', (req, res) => {
-    const db = readDB();
-    const idx = db.products.findIndex(p => p.product_id === parseInt(req.params.id));
-    if (idx === -1) return res.status(404).json({ error: 'Product not found' });
-    db.products[idx].is_active = false;
-    writeDB(db);
+app.patch('/api/products/:id', async (req, res) => {
+  try {
+    const { product_name, description, price, weight, stock_quantity, icon_emoji, image_url } = req.body;
+    const fields = [];
+    const values = [];
+    let idx = 1;
+
+    if (product_name) { fields.push(`product_name = $${idx++}`); values.push(product_name); }
+    if (description !== undefined) { fields.push(`description = $${idx++}`); values.push(description); }
+    if (price !== undefined) { fields.push(`price = $${idx++}`); values.push(price); }
+    if (weight) { fields.push(`weight = $${idx++}`); values.push(weight); }
+    if (stock_quantity !== undefined) { fields.push(`stock_quantity = $${idx++}`); values.push(stock_quantity); }
+    if (icon_emoji) { fields.push(`icon_emoji = $${idx++}`); values.push(icon_emoji); }
+    if (image_url) { fields.push(`image_url = $${idx++}`); values.push(image_url); }
+
+    if (fields.length === 0) {
+      return res.status(400).json({ error: 'No fields to update' });
+    }
+
+    values.push(req.params.id);
+    const result = await pool.query(
+      `UPDATE products SET ${fields.join(', ')}, updated_at = CURRENT_TIMESTAMP 
+       WHERE product_id = $${idx} RETURNING *`,
+      values
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Product not found' });
+    }
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to update product' });
+  }
+});
+
+app.delete('/api/products/:id', async (req, res) => {
+  try {
+    await pool.query(
+      'UPDATE products SET is_active = false, updated_at = CURRENT_TIMESTAMP WHERE product_id = $1',
+      [req.params.id]
+    );
     res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to delete product' });
+  }
 });
 
-// Auth
-app.post('/api/register', (req, res) => {
-    const db = readDB();
-    const { name, email, phone, location, pan, password } = req.body || {};
+// ==================== AUTH ====================
+
+app.post('/api/register', async (req, res) => {
+  try {
+    const { name, email, phone, location, pan, password } = req.body;
+    
     if (!email || !password || !name || !phone || !location) {
-        return res.status(400).json({ error: 'Missing required fields' });
+      return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    const existing = db.customers.find(c => c.email === email);
-    if (existing) return res.status(409).json({ error: 'Email already registered' });
-
-    const customerId = `CUST-${Date.now()}-${Math.floor(Math.random()*1000)}`;
-    const customer = {
-        customer_id: customerId,
-        email,
-        password_hash: simpleHash(password),
-        full_name: name,
-        phone,
-        location,
-        pan_number: pan || null,
-        is_active: true,
-        created_at: new Date().toISOString()
-    };
-
-    db.customers.push(customer);
-    writeDB(db);
-
-    res.json({ success: true, customer: { customerId, name, email, phone, location, pan } });
-});
-
-app.post('/api/login', (req, res) => {
-    const db = readDB();
-    const { email, password } = req.body || {};
-    if (!email || !password) return res.status(400).json({ error: 'Missing email or password' });
-
-    const customer = db.customers.find(c => c.email === email && c.is_active);
-    if (!customer) return res.status(401).json({ error: 'Invalid credentials' });
-
-    if (simpleHash(password) !== customer.password_hash) {
-        return res.status(401).json({ error: 'Invalid credentials' });
+    const existing = await pool.query('SELECT customer_id FROM customers WHERE email = $1', [email]);
+    if (existing.rows.length > 0) {
+      return res.status(409).json({ error: 'Email already registered' });
     }
 
-    res.json({ success: true, customer: { customerId: customer.customer_id, name: customer.full_name, email: customer.email, phone: customer.phone, location: customer.location, pan: customer.pan_number } });
+    const passwordHash = hashPassword(password);
+    const result = await pool.query(
+      `INSERT INTO customers (email, password_hash, full_name, phone, location, pan_number) 
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING customer_id, email, full_name, phone, location, pan_number`,
+      [email, passwordHash, name, phone, location, pan || null]
+    );
+
+    const customer = result.rows[0];
+    res.json({ 
+      success: true, 
+      customer: { 
+        customerId: customer.customer_id, 
+        name: customer.full_name, 
+        email: customer.email, 
+        phone: customer.phone, 
+        location: customer.location, 
+        pan: customer.pan_number 
+      } 
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Registration failed' });
+  }
 });
 
-// Orders
-app.post('/api/orders', (req, res) => {
-    const db = readDB();
+app.post('/api/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Missing email or password' });
+    }
+
+    const passwordHash = hashPassword(password);
+    const result = await pool.query(
+      'SELECT * FROM customers WHERE email = $1 AND password_hash = $2 AND is_active = true',
+      [email, passwordHash]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+
+    await pool.query(
+      'UPDATE customers SET last_login = CURRENT_TIMESTAMP WHERE customer_id = $1',
+      [result.rows[0].customer_id]
+    );
+
+    const customer = result.rows[0];
+    res.json({ 
+      success: true, 
+      customer: { 
+        customerId: customer.customer_id, 
+        name: customer.full_name, 
+        email: customer.email, 
+        phone: customer.phone, 
+        location: customer.location, 
+        pan: customer.pan_number 
+      } 
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Login failed' });
+  }
+});
+
+// ==================== ORDERS ====================
+
+app.post('/api/orders', async (req, res) => {
+  try {
     const { customerId, customer, items, total } = req.body;
     
-    const orderId = `ORD-${Date.now()}-${Math.floor(Math.random()*1000)}`;
-    const order = {
-        order_id: orderId,
-        customer_id: customerId,
-        customer_name: customer.name,
-        customer_phone: customer.phone,
-        customer_location: customer.location,
-        customer_pan: customer.pan,
-        total_amount: total,
-        order_status: 'completed',
-        created_at: new Date().toISOString()
-    };
-    
-    db.orders.push(order);
-    
-    for (const item of items) {
-        db.order_items.push({
-            order_id: orderId,
-            product_id: item.id,
-            product_name: item.name,
-            company_name: item.companyName,
-            price: item.price,
-            weight: item.gram,
-            icon_emoji: item.image
-        });
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      const orderResult = await client.query(
+        `INSERT INTO orders (customer_id, customer_name, customer_phone, customer_location, customer_pan, total_amount, order_status) 
+         VALUES ($1, $2, $3, $4, $5, $6, 'completed') RETURNING order_id`,
+        [customerId, customer.name, customer.phone, customer.location, customer.pan || null, total]
+      );
+      
+      const orderId = orderResult.rows[0].order_id;
+
+      for (const item of items) {
+        await client.query(
+          `INSERT INTO order_items (order_id, product_id, product_name, company_name, price, quantity, weight, icon_emoji) 
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+          [orderId, item.id, item.name, item.companyName, item.price, 1, item.gram, item.image]
+        );
+
+        await client.query(
+          'UPDATE products SET stock_quantity = stock_quantity - 1 WHERE product_id = $1',
+          [item.id]
+        );
+      }
+
+      await client.query('COMMIT');
+      res.json({ success: true, orderId });
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
     }
-    
-    writeDB(db);
-    res.json({ success: true, orderId });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to create order' });
+  }
 });
 
-app.get('/api/orders', (req, res) => {
-    const db = readDB();
-    res.json(db.orders);
+app.get('/api/orders', async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT o.*, c.full_name as customer_name_full 
+       FROM orders o 
+       LEFT JOIN customers c ON o.customer_id = c.customer_id 
+       ORDER BY o.created_at DESC LIMIT 100`
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to fetch orders' });
+  }
+});
+
+app.get('/api/orders/:id/items', async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT * FROM order_items WHERE order_id = $1',
+      [req.params.id]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to fetch order items' });
+  }
+});
+
+// ==================== STATS ====================
+
+app.get('/api/stats', async (req, res) => {
+  try {
+    const companies = await pool.query('SELECT COUNT(*) as count FROM companies WHERE is_active = true');
+    const products = await pool.query('SELECT COUNT(*) as count FROM products WHERE is_active = true');
+    const orders = await pool.query('SELECT COUNT(*) as count, COALESCE(SUM(total_amount), 0) as revenue FROM orders');
+    const lowStock = await pool.query('SELECT COUNT(*) as count FROM products WHERE stock_quantity > 0 AND stock_quantity <= 10 AND is_active = true');
+
+    res.json({
+      companies: parseInt(companies.rows[0].count),
+      products: parseInt(products.rows[0].count),
+      orders: parseInt(orders.rows[0].count),
+      revenue: parseFloat(orders.rows[0].revenue),
+      lowStock: parseInt(lowStock.rows[0].count)
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to fetch stats' });
+  }
 });
 
 app.post('/api/print-order', (req, res) => {
-    res.json({ success: true, message: 'Print disabled on Netlify (serverless)' });
+  res.json({ success: true, message: 'Order received' });
 });
 
 module.exports = app;
-module.exports.handler = serverless(app);
