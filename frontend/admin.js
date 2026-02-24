@@ -287,33 +287,34 @@ const Admin = {
                 </div>
 
                 <div class="companies-list">
-                    ${companies.length === 0 ? '<p style="padding: 2rem; text-align: center; color: #666;">No companies yet. Add your first company!</p>' : companies.map(company => {
-                        const companyProducts = StorageManager.getProducts(company.id);
-                        return `
-                        <div class="company-item-admin">
-                            <div class="company-item-header">
-                                <img src="${company.logo}" alt="${company.name}" class="company-item-logo" onerror="this.src='https://placehold.co/100x100/000/fff?text=${company.name.charAt(0)}'">
-                                <div class="company-item-info">
-                                    <h3>${company.name}</h3>
-                                    <p>${companyProducts.length} Products</p>
+                    ${companies.length === 0 
+                        ? '<p style="padding: 2rem; text-align: center; color: #666;">No companies yet. Add your first company!</p>' 
+                        : companies.map(company => {
+                            const companyProducts = StorageManager.getProducts(company.id);
+                            return `<div class="company-item-admin">
+                                <div class="company-item-header">
+                                    <img src="${company.logo}" alt="${company.name}" class="company-item-logo" onerror="this.src='https://placehold.co/100x100/000/fff?text=${company.name.charAt(0)}'">
+                                    <div class="company-item-info">
+                                        <h3>${company.name}</h3>
+                                        <p>${companyProducts.length} Products</p>
+                                    </div>
+                                    <div class="company-item-actions">
+                                        <button class="btn-icon" onclick="Admin.showEditCompanyModal(${company.id})" title="Edit Company">
+                                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                                            </svg>
+                                        </button>
+                                        <button class="btn-icon" onclick="Admin.deleteCompany(${company.id})" title="Delete Company">
+                                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <polyline points="3 6 5 6 21 6"/>
+                                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                                            </svg>
+                                        </button>
+                                    </div>
                                 </div>
-                                <div class="company-item-actions">
-                                    <button class="btn-icon" onclick="Admin.showEditCompanyModal(${company.id})" title="Edit Company">
-                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                                        </svg>
-                                    </button>
-                                    <button class="btn-icon" onclick="Admin.deleteCompany(${company.id})" title="Delete Company">
-                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                            <polyline points="3 6 5 6 21 6"/>
-                                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-                                        </svg>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    `).join('')}
+                            </div>`;
+                        }).join('')}
                 </div>
             </div>
         `;
@@ -411,15 +412,9 @@ const Admin = {
 
     // Render Orders Management
     renderOrdersManagement(content) {
-        const orders = await Database.select('orders');
-        const ordersWithItems = [];
-
-        for (const order of orders) {
-            const items = await Database.select('order_items', { order_id: order.order_id });
-            ordersWithItems.push({ ...order, items });
-        }
-
-        ordersWithItems.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        const orders = StorageManager.getOrders();
+        
+        orders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
         content.innerHTML = `
             <div class="admin-section">
@@ -439,21 +434,20 @@ const Admin = {
                                 <th>Items</th>
                                 <th>Total</th>
                                 <th>Date</th>
-                                <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
-                            ${ordersWithItems.length === 0 ? `
+                            ${orders.length === 0 ? `
                                 <tr>
-                                    <td colspan="6" class="empty-state-table">No orders yet</td>
+                                    <td colspan="5" class="empty-state-table">No orders yet</td>
                                 </tr>
-                            ` : ordersWithItems.map(order => `
+                            ` : orders.map(order => `
                                 <tr>
-                                    <td><code class="order-id-code">${order.order_id}</code></td>
+                                    <td><code class="order-id-code">${order.orderId}</code></td>
                                     <td>
                                         <div class="customer-cell">
-                                            <strong>${order.customer_name}</strong>
-                                            <small>${order.customer_phone}</small>
+                                            <strong>${order.customer.name}</strong>
+                                            <small>${order.customer.phone}</small>
                                         </div>
                                     </td>
                                     <td>${order.items.length} items</td>
@@ -615,15 +609,14 @@ const Admin = {
     },
 
     // Delete Product
-    async deleteProduct(companyId, productId) {
+    deleteProduct(companyId, productId) {
         if (!confirm('Are you sure you want to delete this product?')) return;
 
         StorageManager.deleteProduct(productId);
-        });
 
         showNotification('Product deleted successfully', 'success');
-        await this.showView('products');
-        await renderCompanies();
+        this.showView('products');
+        renderCompanies();
     },
 
     // Delete Company
@@ -862,9 +855,9 @@ const Admin = {
     },
 
     // View Order Details
-    async viewOrderDetails(orderId) {
-        const order = await Database.findOne('orders', { order_id: orderId });
-        const items = await Database.select('order_items', { order_id: orderId });
+    viewOrderDetails(orderId) {
+        const orders = StorageManager.getOrders();
+        const order = orders.find(o => o.orderId === orderId);
 
         if (!order) return;
 
@@ -874,15 +867,15 @@ const Admin = {
                 <div class="order-info-grid">
                     <div class="info-row">
                         <span class="info-label">Order ID:</span>
-                        <span class="info-value"><code>${order.order_id}</code></span>
+                        <span class="info-value"><code>${order.orderId}</code></span>
                     </div>
                     <div class="info-row">
                         <span class="info-label">Customer:</span>
-                        <span class="info-value">${order.customer_name}</span>
+                        <span class="info-value">${order.customer.name}</span>
                     </div>
                     <div class="info-row">
                         <span class="info-label">Phone:</span>
-                        <span class="info-value">${order.customer_phone}</span>
+                        <span class="info-value">${order.customer.phone}</span>
                     </div>
                     <div class="info-row">
                         <span class="info-label">Location:</span>
