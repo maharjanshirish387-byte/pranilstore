@@ -101,7 +101,7 @@ const Admin = {
     },
 
     // Show specific view
-    showView(viewName) {
+    async showView(viewName) {
         this.currentView = viewName;
         const content = document.getElementById('adminContent');
         
@@ -109,27 +109,27 @@ const Admin = {
         document.querySelectorAll('.admin-nav-btn').forEach(btn => {
             btn.classList.remove('active');
         });
-        document.querySelector(`[data-view="${viewName}"]`)?.classList.add('active');
+        document.querySelector('[data-view="' + viewName + '"]')?.classList.add('active');
 
         switch(viewName) {
             case 'overview':
-                this.renderOverview(content);
+                await this.renderOverview(content);
                 break;
             case 'companies':
-                this.renderCompaniesManagement(content);
+                await this.renderCompaniesManagement(content);
                 break;
             case 'products':
-                this.renderProductsManagement(content);
+                await this.renderProductsManagement(content);
                 break;
             case 'orders':
-                this.renderOrdersManagement(content);
+                await this.renderOrdersManagement(content);
                 break;
         }
     },
 
     // Render Overview Dashboard
-    renderOverview(content) {
-        const stats = StorageManager.getStats();
+    async renderOverview(content) {
+        const stats = await StorageManager.getStats();
         
         content.innerHTML = `
             <div class="admin-overview">
@@ -267,8 +267,8 @@ const Admin = {
     },
 
     // Render Companies Management
-    renderCompaniesManagement(content) {
-        const companies = StorageManager.getCompanies();
+    async renderCompaniesManagement(content) {
+        const companies = await StorageManager.getCompanies();
 
         content.innerHTML = `
             <div class="admin-section">
@@ -321,8 +321,8 @@ const Admin = {
     },
 
     // Render Products Management
-    renderProductsManagement(content) {
-        const companies = StorageManager.getCompanies();
+    async renderProductsManagement(content) {
+        const companies = await StorageManager.getCompanies();
 
         content.innerHTML = `
             <div class="admin-section">
@@ -411,8 +411,8 @@ const Admin = {
     },
 
     // Render Orders Management
-    renderOrdersManagement(content) {
-        const orders = StorageManager.getOrders();
+    async renderOrdersManagement(content) {
+        const orders = await StorageManager.getOrders();
         
         orders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
@@ -797,7 +797,7 @@ const Admin = {
         reader.onload = async (e) => {
             const logoBase64 = e.target.result;
 
-            StorageManager.addCompany({
+            await StorageManager.addCompany({
                 name: name,
                 logo: logoBase64,
                 bgColor: bgColor
@@ -806,7 +806,7 @@ const Admin = {
             this.closeAddCompanyModal();
             showNotification('Company added successfully', 'success');
             await this.showView('companies');
-            await renderCompanies();
+            renderCompanies();
         };
         reader.readAsDataURL(logoFile);
     },

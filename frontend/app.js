@@ -6,18 +6,13 @@ let allCompanies = [];
 let searchQuery = '';
 
 // Show companies view
-function showCompanies() {
+async function showCompanies() {
+    await StorageManager.refreshData();
+    allCompanies = await StorageManager.getCompaniesWithProducts();
+    renderCompanies(allCompanies);
     document.getElementById('companyView').style.display = 'block';
     document.getElementById('productsView').style.display = 'none';
     currentCompanyId = null;
-    const bg = document.getElementById('productsBg');
-    if (bg) bg.style.opacity = '0';
-    
-    // Reset search
-    document.getElementById('searchInput').value = '';
-    document.getElementById('searchClear').style.display = 'none';
-    searchQuery = '';
-    renderCompanies();
 }
 
 // Search functionality
@@ -114,8 +109,8 @@ function hideLoading() {
 document.addEventListener('DOMContentLoaded', async () => {
     try {
         await StorageManager.init();
-        allCompanies = StorageManager.getCompaniesWithProducts();
-        renderCompanies();
+        allCompanies = await StorageManager.getCompaniesWithProducts();
+        renderCompanies(allCompanies);
         await CustomerAuth.checkAuthStatus();
         Admin.checkAdminStatus();
     } catch (error) {
@@ -166,8 +161,8 @@ function showNotification(message, type = 'success') {
 }
 
 // Render companies on page load
-function renderCompanies() {
-    const companies = StorageManager.getCompaniesWithProducts();
+function renderCompanies(companies) {
+    if (!companies) companies = allCompanies;
     const grid = document.getElementById('companiesGrid');
     grid.innerHTML = '';
 
@@ -200,11 +195,11 @@ function renderCompanies() {
 }
 
 // Show products view
-function showProducts(companyId) {
-    const company = StorageManager.getCompanyById(companyId);
+async function showProducts(companyId) {
+    const company = await StorageManager.getCompanyById(companyId);
     if (!company) return;
 
-    const products = StorageManager.getProducts(companyId);
+    const products = await StorageManager.getProducts(companyId);
     currentCompanyId = companyId;
     document.getElementById('companyView').style.display = 'none';
     document.getElementById('productsView').style.display = 'block';

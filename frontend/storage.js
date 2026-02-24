@@ -1,275 +1,151 @@
 // ==================== DATA STORAGE MANAGEMENT ====================
-// Uses localStorage - works immediately without database
-// For data sync across devices, add DATABASE_URL in Vercel
+// Uses API for data sync across all users
+
+const API_BASE = '';
 
 const StorageManager = {
     ADMIN_PASSWORD: 'admin123',
-    DB_KEY: 'pranil_',
+    cache: { companies: null, products: null },
+    initialized: false,
 
-    // Initialize with data
     async init() {
-        if (!localStorage.getItem(this.DB_KEY + 'initialized')) {
-            // Seed default data from data.js
-            if (typeof companiesData !== 'undefined') {
-                localStorage.setItem(this.DB_KEY + 'companies', JSON.stringify(companiesData));
-                const allProducts = [];
-                companiesData.forEach(c => {
-                    c.products.forEach(p => {
-                        allProducts.push({
-                            ...p,
-                            companyId: c.id,
-                            companyName: c.name
-                        });
-                    });
-                });
-                localStorage.setItem(this.DB_KEY + 'products', JSON.stringify(allProducts));
-            } else {
-                localStorage.setItem(this.DB_KEY + 'companies', JSON.stringify([]));
-                localStorage.setItem(this.DB_KEY + 'products', JSON.stringify([]));
-            }
-            localStorage.setItem(this.DB_KEY + 'orders', JSON.stringify([]));
-            localStorage.setItem(this.DB_KEY + 'customers', JSON.stringify([]));
-            localStorage.setItem(this.DB_KEY + 'initialized', 'true');
-        }
+        // Load initial data from API
+        await this.refreshData();
+        this.initialized = true;
     },
 
-    // Generate unique ID
-    generateId(prefix, collection) {
-        const items = JSON.parse(localStorage.getItem(this.DB_KEY + collection) || '[]');
-        const maxId = items.length > 0 ? Math.max(...items.map(i => i.id)) : 0;
-        return `${prefix}${maxId + 1}`;
+    async refreshData() {
+        try {
+            const [companiesRes, productsRes] = await Promise.all([
+                fetch(`${API_BASE}/api/companies`),
+                fetch(`${API_BASE}/api/products`)
+            ]);
+            this.cache.companies = await companiesRes.json();
+            this.cache.products = await productsRes.json();
+        } catch (err) {
+            console.error('Failed to load data:', err);
+            this.cache.companies = [];
+            this.cache.products = [];
+        }
     },
 
     // ==================== COMPANIES ====================
-    getCompanies() {
-        return JSON.parse(localStorage.getItem(this.DB_KEY + 'companies') || '[]');
+    async getCompanies() {
+        if (!this.cache.companies) await this.refreshData();
+        return this.cache.companies.map(c => ({
+            id: c.id,
+            name: c.name,
+            logo: c.logo,
+            bgColor: c.bgColor,
+            isActive: c.isActive
+        }));
     },
 
-    getCompanyById(id) {
-        const companies = this.getCompanies();
+    async getCompanyById(id) {
+        const companies = await this.getCompanies();
         return companies.find(c => c.id === parseInt(id));
     },
 
-    addCompany(company) {
-        const companies = this.getCompanies();
-        const id = companies.length > 0 ? Math.max(...companies.map(c => c.id)) + 1 : 1;
-        const newCompany = {
-            id,
-            name: company.name,
-            logo: company.logo || 'https://placehold.co/100x100/000/fff?text=' + company.name.charAt(0),
-            bgColor: company.bgColor || '#000000',
-            isActive: true,
-            createdAt: new Date().toISOString()
-        };
-        companies.push(newCompany);
-        localStorage.setItem(this.DB_KEY + 'companies', JSON.stringify(companies));
-        return newCompany;
+    async addCompany(data) {
+        const res = await fetch(`${API_BASE}/api/companies`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        const company = await res.json();
+        await this.refreshData();
+        return company;
     },
 
-    updateCompany(id, updates) {
-        const companies = this.getCompanies();
-        const idx = companies.findIndex(c => c.id === parseInt(id));
-        if (idx !== -1) {
-            companies[idx] = { ...companies[idx], ...updates };
-            localStorage.setItem(this.DB_KEY + 'companies', JSON.stringify(companies));
-            return companies[idx];
-        }
-        return null;
+    async updateCompany(id, data) {
+        await fetch(`${API_BASE}/api/companies/${id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        await this.refreshData();
+        return { success: true };
     },
 
-    deleteCompany(id) {
-        const companies = this.getCompanies();
-        const filtered = companies.filter(c => c.id !== parseInt(id));
-        localStorage.setItem(this.DB_KEY + 'companies', JSON.stringify(filtered));
-        
-        // Also delete products of this company
-        const products = this.getProducts().filter(p => p.companyId !== parseInt(id));
-        localStorage.setItem(this.DB_KEY + 'products', JSON.stringify(products));
-        return true;
+    async deleteCompany(id) {
+        await fetch(`${API_BASE}/api/companies/${id}`, { method: 'DELETE' });
+        await this.refreshData();
+        return { success: true };
     },
 
     // ==================== PRODUCTS ====================
-    getProducts(companyId = null) {
-        let products = JSON.parse(localStorage.getItem(this.DB_KEY + 'products') || '[]');
+    async getProducts(companyId = null) {
+        if (!this.cache.products) await this.refreshData();
+        let products = this.cache.products;
         if (companyId) {
             products = products.filter(p => p.companyId === parseInt(companyId));
         }
         return products;
     },
 
-    getProductById(id) {
-        const products = this.getProducts();
+    async getProductById(id) {
+        const products = await this.getProducts();
         return products.find(p => p.id === parseInt(id));
     },
 
-    addProduct(product) {
-        const products = this.getProducts();
-        const id = products.length > 0 ? Math.max(...products.map(p => p.id)) + 1 : 101;
-        const company = this.getCompanyById(product.companyId);
-        
-        const newProduct = {
-            id,
-            companyId: parseInt(product.companyId),
-            companyName: company ? company.name : 'Unknown',
-            name: product.name,
-            price: parseFloat(product.price),
-            gram: product.gram || '0g',
-            stock: parseInt(product.stock) || 0,
-            image: product.image || '',
-            isActive: true,
-            createdAt: new Date().toISOString()
-        };
-        products.push(newProduct);
-        localStorage.setItem(this.DB_KEY + 'products', JSON.stringify(products));
-        return newProduct;
+    async addProduct(data) {
+        const res = await fetch(`${API_BASE}/api/products`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        const product = await res.json();
+        await this.refreshData();
+        return product;
     },
 
-    updateProduct(id, updates) {
-        const products = this.getProducts();
-        const idx = products.findIndex(p => p.id === parseInt(id));
-        if (idx !== -1) {
-            products[idx] = { ...products[idx], ...updates };
-            localStorage.setItem(this.DB_KEY + 'products', JSON.stringify(products));
-            return products[idx];
-        }
-        return null;
+    async updateProduct(id, data) {
+        await fetch(`${API_BASE}/api/products/${id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        await this.refreshData();
+        return { success: true };
     },
 
-    deleteProduct(id) {
-        const products = this.getProducts().filter(p => p.id !== parseInt(id));
-        localStorage.setItem(this.DB_KEY + 'products', JSON.stringify(products));
-        return true;
+    async deleteProduct(id) {
+        await fetch(`${API_BASE}/api/products/${id}`, { method: 'DELETE' });
+        await this.refreshData();
+        return { success: true };
     },
 
     // ==================== COMPANIES WITH PRODUCTS ====================
-    getCompaniesWithProducts() {
-        const companies = this.getCompanies().filter(c => c.isActive);
-        const products = this.getProducts();
+    async getCompaniesWithProducts() {
+        const companies = await this.getCompanies();
+        const products = await this.getProducts();
         
         return companies.map(company => ({
-            id: company.id,
-            name: company.name,
-            logo: company.logo,
-            bgColor: company.bgColor,
-            products: products
-                .filter(p => p.companyId === company.id && p.isActive)
-                .map(p => ({
-                    id: p.id,
-                    name: p.name,
-                    price: p.price,
-                    gram: p.gram,
-                    stock: p.stock,
-                    image: p.image
-                }))
+            ...company,
+            products: products.filter(p => p.companyId === company.id)
         }));
     },
 
-    // ==================== CUSTOMERS ====================
-    registerCustomer(data) {
-        const customers = JSON.parse(localStorage.getItem(this.DB_KEY + 'customers') || '[]');
-        
-        if (customers.find(c => c.email === data.email)) {
-            return { success: false, message: 'Email already registered' };
-        }
-        
-        const id = 'CUST-' + Date.now();
-        const customer = {
-            id,
-            email: data.email,
-            password: this.hashPassword(data.password),
-            name: data.name,
-            phone: data.phone,
-            location: data.location,
-            pan: data.pan || '',
-            createdAt: new Date().toISOString()
-        };
-        
-        customers.push(customer);
-        localStorage.setItem(this.DB_KEY + 'customers', JSON.stringify(customers));
-        return { success: true, customerId: id, customer };
-    },
-
-    loginCustomer(email, password) {
-        const customers = JSON.parse(localStorage.getItem(this.DB_KEY + 'customers') || '[]');
-        const customer = customers.find(c => c.email === email && c.password === this.hashPassword(password));
-        
-        if (!customer) {
-            return { success: false, message: 'Invalid credentials' };
-        }
-        
-        return {
-            success: true,
-            customerId: customer.id,
-            customer: {
-                customerId: customer.id,
-                name: customer.name,
-                email: customer.email,
-                phone: customer.phone,
-                location: customer.location,
-                pan: customer.pan
-            }
-        };
-    },
-
-    getCustomerById(id) {
-        const customers = JSON.parse(localStorage.getItem(this.DB_KEY + 'customers') || '[]');
-        return customers.find(c => c.id === id);
-    },
-
-    // Simple hash
-    hashPassword(password) {
-        let hash = 0;
-        for (let i = 0; i < password.length; i++) {
-            hash = ((hash << 5) - hash) + password.charCodeAt(i);
-            hash = hash & hash;
-        }
-        return hash.toString(36);
-    },
-
     // ==================== ORDERS ====================
-    createOrder(order) {
-        const orders = JSON.parse(localStorage.getItem(this.DB_KEY + 'orders') || '[]');
-        const orderId = 'ORD-' + Date.now();
-        
-        const newOrder = {
-            orderId,
-            customerId: order.customerId,
-            customer: order.customer,
-            items: order.items,
-            total: order.total,
-            status: 'completed',
-            createdAt: new Date().toISOString()
-        };
-        
-        orders.push(newOrder);
-        localStorage.setItem(this.DB_KEY + 'orders', JSON.stringify(orders));
-        
-        // Update product stock
-        order.items.forEach(item => {
-            this.updateProduct(item.id, { stock: Math.max(0, item.stock - 1) });
+    async createOrder(order) {
+        const res = await fetch(`${API_BASE}/api/orders`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(order)
         });
-        
-        return newOrder;
+        await this.refreshData();
+        return await res.json();
     },
 
-    getOrders() {
-        return JSON.parse(localStorage.getItem(this.DB_KEY + 'orders') || '[]');
+    async getOrders() {
+        const res = await fetch(`${API_BASE}/api/orders`);
+        return await res.json();
     },
 
     // ==================== STATS ====================
-    getStats() {
-        const companies = this.getCompanies();
-        const products = this.getProducts();
-        const orders = this.getOrders();
-        const revenue = orders.reduce((sum, o) => sum + o.total, 0);
-        
-        return {
-            companies: companies.length,
-            products: products.length,
-            orders: orders.length,
-            revenue: revenue,
-            lowStock: products.filter(p => p.stock > 0 && p.stock <= 10).length
-        };
+    async getStats() {
+        const res = await fetch(`${API_BASE}/api/stats`);
+        return await res.json();
     },
 
     // ==================== ADMIN ====================
@@ -281,6 +157,7 @@ const StorageManager = {
         sessionStorage.setItem('admin_logged_in', status ? 'true' : 'false');
     },
 
+    // ==================== CUSTOMERS (local only) ====================
     isCustomerLoggedIn() {
         return sessionStorage.getItem('current_user_id') !== null;
     },
@@ -291,20 +168,25 @@ const StorageManager = {
     },
 
     async getCurrentUser() {
-        const id = sessionStorage.getItem('current_user_id');
-        if (!id) return null;
-        const customer = this.getCustomerById(id);
-        if (!customer) return null;
-        return {
-            customerId: customer.id,
-            name: customer.name,
-            email: customer.email,
-            phone: customer.phone,
-            location: customer.location,
-            pan: customer.pan
-        };
+        const user = sessionStorage.getItem('current_user');
+        return user ? JSON.parse(user) : null;
+    },
+
+    registerCustomer(data) {
+        // Simple local registration
+        const id = 'CUST-' + Date.now();
+        sessionStorage.setItem('current_user_id', id);
+        sessionStorage.setItem('current_user', JSON.stringify({ customerId: id, ...data }));
+        return { success: true, customerId: id };
+    },
+
+    loginCustomer(email, password) {
+        // Demo login - accepts any email/password
+        const id = 'CUST-' + Date.now();
+        sessionStorage.setItem('current_user_id', id);
+        sessionStorage.setItem('current_user', JSON.stringify({ customerId: id, name: email.split('@')[0], email }));
+        return { success: true, customerId: id };
     }
 };
 
-// Make it global
 window.StorageManager = StorageManager;
