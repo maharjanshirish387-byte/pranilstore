@@ -6,11 +6,27 @@ const StorageManager = {
     ADMIN_PASSWORD: 'admin123',
     DB_KEY: 'pranil_',
 
-    // Initialize with empty data
+    // Initialize with data
     async init() {
         if (!localStorage.getItem(this.DB_KEY + 'initialized')) {
-            localStorage.setItem(this.DB_KEY + 'companies', JSON.stringify([]));
-            localStorage.setItem(this.DB_KEY + 'products', JSON.stringify([]));
+            // Seed default data from data.js
+            if (typeof companiesData !== 'undefined') {
+                localStorage.setItem(this.DB_KEY + 'companies', JSON.stringify(companiesData));
+                const allProducts = [];
+                companiesData.forEach(c => {
+                    c.products.forEach(p => {
+                        allProducts.push({
+                            ...p,
+                            companyId: c.id,
+                            companyName: c.name
+                        });
+                    });
+                });
+                localStorage.setItem(this.DB_KEY + 'products', JSON.stringify(allProducts));
+            } else {
+                localStorage.setItem(this.DB_KEY + 'companies', JSON.stringify([]));
+                localStorage.setItem(this.DB_KEY + 'products', JSON.stringify([]));
+            }
             localStorage.setItem(this.DB_KEY + 'orders', JSON.stringify([]));
             localStorage.setItem(this.DB_KEY + 'customers', JSON.stringify([]));
             localStorage.setItem(this.DB_KEY + 'initialized', 'true');
